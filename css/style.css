@@ -464,6 +464,47 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 .pw-strength { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin: -6px 0 12px; }
 .pw-strength i { display: block; height: 100%; width: 0; border-radius: 2px; transition: width .3s, background .3s; }
 
+/* ==================== 设置 ==================== */
+.set-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.set-row .set-field { flex: 1; min-width: 200px; }
+.set-row .set-inline { display: flex; gap: 8px; flex-wrap: wrap; }
+.set-row .set-inline input { flex: 1; min-width: 130px; }
+.set-row input, .set-row select {
+  height: 40px; border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 0 12px; font-size: 13.5px; background: var(--card); color: var(--ink);
+  outline: none; width: 100%;
+}
+.set-row input:focus, .set-row select:focus { border-color: var(--brand); }
+.set-tip { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+.set-del { flex: none; }
+
+/* ==================== 账户总资产条 ==================== */
+.asset-strip {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  color: #fff;
+}
+.asset-strip .as-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.asset-strip .as-block { display: flex; flex-direction: column; gap: 2px; }
+.asset-strip .as-label { font-size: 12px; opacity: .85; }
+.asset-strip .as-val { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.asset-strip .as-sep { width: 1px; height: 34px; background: rgba(255, 255, 255, .3); }
+.asset-strip .btn-primary { background: rgba(255, 255, 255, .2); box-shadow: none; }
+
+/* 转账弹窗：账户明细 + 预览 */
+.tr-detail {
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; margin-bottom: 12px;
+  max-height: 160px; overflow-y: auto;
+}
+.tr-detail-title { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+.tr-detail-row {
+  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; padding: 3px 0; border-top: 1px dashed var(--line);
+}
+.tr-detail-row:first-of-type { border-top: none; }
+.tr-preview { font-size: 12.5px; color: var(--brand); margin: -6px 0 4px; min-height: 18px; line-height: 1.5; }
+
 /* ==================== 弹窗 ==================== */
 #modal-overlay {
   position: fixed; inset: 0; z-index: 60;
@@ -513,13 +554,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 /* ==================== 还款提醒横幅（仪表盘顶部） ==================== */
 .pay-alert {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, #f59e0b, #f43f5e);
   border-radius: var(--radius);
   padding: 14px 16px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   color: #fff;
-  box-shadow: 0 8px 24px rgba(245, 158, 11, .35);
   animation: pop .3s ease;
+}
+.pay-alert.yellow {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, .35);
+}
+.pay-alert.red {
+  background: linear-gradient(135deg, #ef4444, #f43f5e);
+  box-shadow: 0 8px 24px rgba(244, 63, 94, .35);
 }
 .pay-alert .pa-icon {
   width: 38px; height: 38px; flex: none; border-radius: 12px;
@@ -536,11 +583,33 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 }
 .pa-btn:active { transform: scale(.95); }
 .pa-btn.paid { background: #fff; color: #d97706; }
+.pay-alert.red .pa-btn.paid { color: #dc2626; }
 .pa-btn.temp { background: rgba(255, 255, 255, .18); color: #fff; }
 @media (max-width: 600px) {
   .pay-alert { flex-wrap: wrap; }
-  .pay-alert .pa-btn { height: 36px; flex: 1; }
+  /* 小屏：图标+文字占满第一行，两个按钮换行各占一半 */
+  .pay-alert .pa-icon { width: 30px; height: 30px; }
+  .pay-alert .pa-main { flex: 1 1 calc(100% - 42px); }
+  .pay-alert .pa-btn { flex: 1 1 45%; height: 36px; }
 }
+
+/* ==================== 倒计时条（仪表盘顶部） ==================== */
+.count-strip {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.count-chip {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: var(--shadow);
+  min-width: 92px;
+}
+.count-chip b { font-size: 13px; }
+.count-chip .cc-days { font-size: 12px; color: var(--brand); font-weight: 700; }
+.count-chip.today { border-color: var(--green); }
+.count-chip.today .cc-days { color: var(--green); }
 
 /* ==================== 支付工具悬浮添加按钮（手机端） ==================== */
 .tl-fab {
@@ -558,10 +627,10 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 .tl-fab:active { transform: scale(.92); }
 
 @media (max-width: 768px) {
-  /* 手机端：新增支付工具卡片默认隐藏，用悬浮按钮 + 弹窗代替 */
+  /* 手机端：新增支付工具/账户卡片默认隐藏，用悬浮按钮 + 弹窗代替 */
   .tl-add-card { display: none; }
   .tl-fab { display: flex; }
-  #page-tools { padding-bottom: 86px; }
+  #page-tools, #page-accounts { padding-bottom: 86px; }
 }
 
 /* 安卓 APP 环境顶部安全区 */

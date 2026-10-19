@@ -1,5 +1,8 @@
 /* ============================================================
- * dashboard.js — 仪表盘：今年第几天 / 四个圆环 / 时光轴
+ * dashboard.js — 仪表盘
+ * 顶部：还款提醒横幅（账单日临近7天黄色 / 3天红色）
+ *      倒计时条（发薪日/我的生日/春节/其他生日/节日）
+ * 今天第几天 / 四个圆环 / 时光轴
  * ============================================================ */
 (function (global) {
   'use strict';
@@ -20,9 +23,12 @@
     var dayOfYear = Math.floor((today - start) / 86400000) + 1;
     var yearLen = ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0) ? 366 : 365;
     var daysLeft = yearLen - dayOfYear;
-    // 下一个春节（内置 2026-2030 简表，可外推）
+    // 下一个春节（内置 2026-2036 简表，可外推 / 或手动指定）
     var cny = nextCny(y, now);
     var cnyDays = Math.ceil((cny - today) / 86400000);
+    // 设置里隐藏春节时，顶部信息条不再显示"距离春节"
+    var stCfg = global.DB.getSettings();
+    var cnyHidden = !!(stCfg && stCfg.cny && stCfg.cny.show === false);
 
     var week = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
     var dateStr = y + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · 星期' + week;
@@ -33,12 +39,14 @@
 
     el.innerHTML =
       payAlertsHtml(today) +
+      countdownHtml(today) +
       '<div class="day-strip">' +
         '<div class="ds-today">' + dateStr + '<b>' + y + '年的第 ' + dayOfYear + ' 天</b></div>' +
         '<div class="ds-sep"></div>' +
-        '<div class="ds-item"><div class="ds-num">' + daysLeft + '</div><div class="ds-label">天到年尾</div></div>' +
-        '<div class="ds-sep"></div>' +
-        '<div class="ds-item"><div class="ds-num">' + (cnyDays > 0 ? cnyDays : 0) + '</div><div class="ds-label">天到过年</div></div>' +
+        '<div class="ds-item"><div class="ds-num">' + daysLeft + '</div><div class="ds-label">距离年底</div></div>' +
+        (cnyHidden ? '' :
+          '<div class="ds-sep"></div>' +
+          '<div class="ds-item"><div class="ds-num">' + (cnyDays > 0 ? cnyDays : 0) + '</div><div class="ds-label">距离春节</div></div>') +
       '</div>' +
 
       '<div class="rings">' +
@@ -64,13 +72,14 @@
     el.querySelectorAll('.pay-alert .pa-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (btn.dataset.act === 'paid') {
-          // 已还款：记录本期账单日，到下个账单日临近时再提醒
-          global.DB.markToolPaid(+btn.dataset.qid, btn.dataset.bill);
+          var id = +btn.dataset.id;
+          var bill = btn.dataset.bill;
+          if (btn.dataset.kind === 'acct') global.DB.markAccountPaid(id, bill);
+          else global.DB.markToolPaid(id, bill);
           global.UI.toast('已记录「' + btn.dataset.name + '」本期还款', 'ok');
           render();
         } else {
-          // 临时关闭：本次会话内不再显示（刷新后恢复）
-          TEMP_DISMISS[+btn.dataset.qid] = 1;
+          TEMP_DISMISS[btn.dataset.key] = 1;
           var card = btn.closest('.pay-alert');
           if (card) card.remove();
         }
@@ -125,6 +134,145 @@
     mk('mon-out', sm.out, '#f43f5e');
   }
 
+  /* ==================== 还款提醒横幅（账单日临近） ====================
+   * 支付工具（qday）与信用卡类账户（accday）统一提醒：
+   * 临近 7 天黄色横幅，临近 3 天红色横幅
+   */
+  function payAlertsHtml(today0) {
+    var d = global.DB.get();
+    var list = [];
+    d.gongju.forEach(function (q) {
+      if (!q.qday || q.qhide) return;
+      var nb = nextBillDate(+q.qday, today0);
+      var days = Math.round((nb - today0) / 86400000);
+      if (days <= 7 && q.qpaid !== fmtDay(nb) && !TEMP_DISMISS['q' + q.qid]) {
+        list.push({ kind: 'tool', id: q.qid, name: q.qname, type: q.qtype || '信用卡', nb: nb, days: days });
+      }
+    });
+    d.accounts.forEach(function (a) {
+      if (!global.DB.isCreditAcct(a.acctype) || !a.accday || a.acchide) return;
+      var nb = nextBillDate(+a.accday, today0);
+      var days = Math.round((nb - today0) / 86400000);
+      if (days <= 7 && a.accpaid !== fmtDay(nb) && !TEMP_DISMISS['a' + a.accid]) {
+        list.push({ kind: 'acct', id: a.accid, name: a.accname, type: (a.acctype || '信用卡') + '账户', nb: nb, days: days });
+      }
+    });
+    list.sort(function (x, y) { return x.days - y.days; });
+
+    return list.map(function (x) {
+      var level = x.days <= 3 ? 'red' : 'yellow';
+      var ds = x.days === 0 ? '就是今天' : '还有 ' + x.days + ' 天';
+      return '<div class="pay-alert ' + level + '">' +
+        '<div class="pa-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></div>' +
+        '<div class="pa-main"><b>' + global.UI.esc(x.name) + '</b>（' + global.UI.esc(x.type) + '）账单日 ' +
+          (x.nb.getMonth() + 1) + '月' + x.nb.getDate() + '日，' + ds +
+          '<small>出账日临近，请提前安排还款</small></div>' +
+        '<button class="pa-btn paid" data-act="paid" data-kind="' + x.kind + '" data-id="' + x.id + '" data-bill="' + fmtDay(x.nb) + '" data-name="' + global.UI.esc(x.name) + '">已还款</button>' +
+        '<button class="pa-btn temp" data-act="temp" data-key="' + x.kind[0] + x.id + '">临时关闭</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function nextBillDate(day, today0) {
+    var y = today0.getFullYear(), m = today0.getMonth();
+    var d1 = billDateIn(y, m, day);
+    if (d1 >= today0) return d1;
+    return billDateIn(y, m + 1, day);
+  }
+  function billDateIn(y, m, day) {
+    var last = new Date(y, m + 1, 0).getDate();
+    return new Date(y, m, Math.min(day, last));
+  }
+  function fmtDay(dt) {
+    return dt.getFullYear() + '-' + global.UI.pad(dt.getMonth() + 1) + '-' + global.UI.pad(dt.getDate());
+  }
+
+  /* ==================== 倒计时条（设置里的日期项） ==================== */
+  function countdownHtml(today0) {
+    var st = global.DB.getSettings();
+    var items = [];
+
+    function push(label, dateObj, tone) {
+      if (!dateObj || dateObj.show === false) return;
+      var dt = dateObj._date || null;
+      if (!dt) return;
+      var days = Math.round((new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) - today0) / 86400000);
+      var txt = days === 0 ? '就是今天' : (days > 0 ? '还有 ' + days + ' 天' : '已过 ' + (-days) + ' 天');
+      items.push({ label: label, txt: txt, days: days, tone: tone || '' });
+    }
+
+    // 发薪日（每月循环）
+    if (st.payday && st.payday.show && st.payday.day >= 1 && st.payday.day <= 31) {
+      var pd = nextBillDate(st.payday.day, today0);
+      push('发薪日', { _date: pd, show: true }, '');
+    }
+    // 我的生日（公历/农历，每年循环）
+    if (st.myBirthday && st.myBirthday.show && /^\d{1,2}-\d{1,2}$/.test(st.myBirthday.date)) {
+      var isLunar = st.myBirthday.cal === 'lunar';
+      var mbDate = isLunar ? nextLunarMonthDay(st.myBirthday.date, today0) : nextMonthDay(st.myBirthday.date, today0);
+      push('我的生日' + (isLunar ? '（农历）' : ''), { _date: mbDate, show: true }, '');
+    }
+    // 春节（优先手动，其次内置）
+    if (st.cny && st.cny.show && st.cny.date) {
+      var c = global.UI.parseDate(st.cny.date);
+      if (c) push('春节', { _date: c, show: true }, '');
+    }
+    // 其他人生日（公历/农历）
+    (st.birthdays || []).forEach(function (b) {
+      if (b.show && b.date) {
+        var bl = b.cal === 'lunar';
+        var bd = bl ? nextLunarMonthDay(b.date, today0) : nextMonthDay(b.date, today0);
+        push((b.name || '生日') + (bl ? '（农历）' : ''), { _date: bd, show: true }, '');
+      }
+    });
+    // 喜欢的节日（完整日期，一次性）
+    (st.festivals || []).forEach(function (f) {
+      if (f.show && f.date) {
+        var fd = global.UI.parseDate(f.date);
+        if (fd) push(f.name || '节日', { _date: fd, show: true }, '');
+      }
+    });
+
+    if (!items.length) return '';
+    items.sort(function (a, b) { return a.days - b.days; });
+    return '<div class="count-strip">' +
+      items.map(function (it) {
+        return '<span class="count-chip' + (it.days === 0 ? ' today' : '') + '"><b>' + global.UI.esc(it.label) + '</b>' +
+          '<span class="cc-days">' + it.txt + '</span></span>';
+      }).join('') +
+      '</div>';
+  }
+
+  // 解析 'MM-DD'（或 'YYYY-MM-DD' 取月日），返回下一个循环日期
+  function nextMonthDay(md, today0) {
+    var mm = /^(\d{1,2})-(\d{1,2})/.exec(String(md).trim());
+    if (!mm) return null;
+    var mo = +mm[1], dy = +mm[2];
+    var y = today0.getFullYear();
+    var d1 = new Date(y, mo - 1, Math.min(dy, new Date(y, mo, 0).getDate()));
+    if (d1 < today0) d1 = new Date(y + 1, mo - 1, Math.min(dy, new Date(y + 1, mo, 0).getDate()));
+    return d1;
+  }
+
+  // 农历 'MM-DD'（农历月-日）→ 下一个对应的公历日期（用本地 solarlunar 库换算）
+  function nextLunarMonthDay(md, today0) {
+    var mm = /^(\d{1,2})-(\d{1,2})$/.exec(String(md).trim());
+    if (!mm) return null;
+    var SL = global.solarlunar;
+    if (!SL || !SL.lunar2solar) return null;
+    var mo = +mm[1], dy = +mm[2];
+    var years = [today0.getFullYear(), today0.getFullYear() + 1];
+    for (var i = 0; i < years.length; i++) {
+      var r = null;
+      try { r = SL.lunar2solar(years[i], mo, dy); } catch (e) { r = null; }
+      if (r && r.cYear) {
+        var dt = new Date(r.cYear, r.cMonth - 1, r.cDay);
+        if (dt >= today0) return dt;
+      }
+    }
+    return null;
+  }
+
   /* ---------- 时光轴 ---------- */
   function loadMore() {
     var d = global.DB.get();
@@ -136,7 +284,6 @@
     var frag = document.createDocumentFragment();
 
     var batch = list.slice(shown, shown + PAGE_SIZE);
-    // 按日分组渲染
     var lastDay = shown > 0 ? dayOf(list[shown - 1]) : null;
     batch.forEach(function (b) {
       var day = dayOf(b);
@@ -178,6 +325,26 @@
     return r;
   }
 
+  /* 支付工具(账户) 显示格式：
+   * 普通账户：工具名(账户类型)，如 微信支付(零钱)、微信支付(零钱通)、支付宝(余额)
+   * 借记卡/信用卡账户：工具名(账户名称+类型-后四位)
+   *   如 微信支付(中国银行信用卡-8888)、支付宝(招商银行借记卡-8888)
+   * 后四位优先取工具的卡号后四位 qlast4，其次取账户卡号尾号
+   */
+  function toolAcctLabel(b) {
+    var tool = global.DB.gongjuName(b.wtool);
+    if (!b.wacct) return tool;
+    var a = (global.DB.get().accounts || []).find(function (x) { return x.accid === b.wacct; });
+    if (!a) return tool;
+    var t = a.acctype || '';
+    if (t === '借记卡' || t === '信用卡') {
+      var q = (global.DB.get().gongju || []).find(function (x) { return x.qid === b.wtool; });
+      var last4 = (q && q.qlast4) || String(a.accuid || '').replace(/\D/g, '').slice(-4);
+      return tool + '(' + (a.accname || '') + t + (last4 ? '-' + last4 : '') + ')';
+    }
+    return t ? tool + '(' + t + ')' : tool;
+  }
+
   function item(b) {
     var div = document.createElement('div');
     div.className = 'tl-item';
@@ -191,7 +358,7 @@
           '<span class="tag">' + (isIn ? '收入' : '支出') + '</span>' +
           (b.wqtype === 1 ? '<span class="tag">线上</span>' : '<span class="tag">线下</span>') +
         '</div>' +
-        '<div class="tl-meta"><span>' + global.UI.esc(tool) + '</span>' +
+        '<div class="tl-meta"><span>' + global.UI.esc(toolAcctLabel(b)) + '</span>' +
           (b.wpayname ? '<span>' + global.UI.esc(b.wpayname) + '</span>' : '') +
           '<span>' + global.UI.esc((b.wtime || '').slice(11, 16)) + '</span>' +
         '</div>' +
@@ -202,43 +369,6 @@
     return div;
   }
 
-  /* ---------- 信用卡/花呗/借呗 还款提醒横幅（账单日临近一周） ---------- */
-  function payAlertsHtml(today0) {
-    var d = global.DB.get();
-    var list = d.gongju.filter(function (q) { return q.qday && !q.qhide; }).map(function (q) {
-      var nb = nextBillDate(+q.qday, today0);
-      return { q: q, nb: nb, days: Math.round((nb - today0) / 86400000) };
-    }).filter(function (x) {
-      return x.days <= 7 && x.q.qpaid !== fmtDay(x.nb) && !TEMP_DISMISS[x.q.qid];
-    }).sort(function (a, b) { return a.days - b.days; });
-
-    return list.map(function (x) {
-      var ds = x.days === 0 ? '就是今天' : '还有 ' + x.days + ' 天';
-      return '<div class="pay-alert">' +
-        '<div class="pa-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></div>' +
-        '<div class="pa-main"><b>' + global.UI.esc(x.q.qname) + '</b>（' + global.UI.esc(x.q.qtype || '信用卡') + '）账单日 ' +
-          (x.nb.getMonth() + 1) + '月' + x.nb.getDate() + '日，' + ds +
-          '<small>出账日临近，请提前安排还款</small></div>' +
-        '<button class="pa-btn paid" data-act="paid" data-qid="' + x.q.qid + '" data-bill="' + fmtDay(x.nb) + '" data-name="' + global.UI.esc(x.q.qname) + '">已还款</button>' +
-        '<button class="pa-btn temp" data-act="temp" data-qid="' + x.q.qid + '">临时关闭</button>' +
-      '</div>';
-    }).join('');
-  }
-
-  function nextBillDate(day, today0) {
-    var y = today0.getFullYear(), m = today0.getMonth();
-    var d1 = billDateIn(y, m, day);
-    if (d1 >= today0) return d1;
-    return billDateIn(y, m + 1, day);
-  }
-  function billDateIn(y, m, day) {
-    var last = new Date(y, m + 1, 0).getDate();
-    return new Date(y, m, Math.min(day, last));
-  }
-  function fmtDay(dt) {
-    return dt.getFullYear() + '-' + global.UI.pad(dt.getMonth() + 1) + '-' + global.UI.pad(dt.getDate());
-  }
-
   /* 春节日期（2026-2036，农历正月初一公历日期） */
   var CNYS = {
     2026: '02-17', 2027: '02-06', 2028: '01-26', 2029: '02-13', 2030: '02-03',
@@ -246,6 +376,14 @@
     2036: '01-28'
   };
   function nextCny(y, now) {
+    // 优先使用设置里的春节日期
+    try {
+      var st = global.DB.getSettings();
+      if (st && st.cny && st.cny.date) {
+        var c = global.UI.parseDate(st.cny.date);
+        if (c) return c;
+      }
+    } catch (e) { /* ignore */ }
     var m;
     if (CNYS[y]) {
       m = /^(\d{2})-(\d{2})$/.exec(CNYS[y]);

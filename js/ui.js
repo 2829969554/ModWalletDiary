@@ -74,10 +74,14 @@
     UI.modal({ title: title, body: body, okText: okText || '确定', danger: true, onOk: onOk });
   };
 
-  /* ---------- 带选项面板的可编辑下拉 ---------- */
+  /* ---------- 带选项面板的可编辑下拉 ----------
+   * 单击：只弹出选项面板供选择（输入框保持只读，手机上不会弹出输入法）
+   * 双击：解除只读并聚焦，可输入关键字过滤 / 自定义新值
+   */
   // el: input 元素；options: [{v:显示值, label:附加显示}]；onPick: 选中回调
   UI.combo = function (el, options, onPick) {
     var panel = null, idx = -1;
+    el.readOnly = true; // 默认只读：单击只能选择
 
     function close() {
       if (panel) { panel.remove(); panel = null; idx = -1; }
@@ -107,6 +111,7 @@
         item.addEventListener('mousedown', function (e) {
           e.preventDefault();
           el.value = o.v;
+          el.readOnly = true; // 选完恢复只读
           close();
           if (onPick) onPick(o.v);
         });
@@ -127,7 +132,16 @@
     }
 
     el.addEventListener('focus', function () { idx = -1; render(el.value); });
+    // mousedown 兜底：个别环境程序化 focus 不派发事件，真实点击一定触发
+    el.addEventListener('mousedown', function () { idx = -1; render(el.value); });
     el.addEventListener('input', function () { idx = -1; render(el.value); });
+    // 双击：解除只读，允许输入过滤/自定义（focus 不会重复触发，这里手动渲染）
+    el.addEventListener('dblclick', function () {
+      el.readOnly = false;
+      el.focus();
+      idx = -1;
+      render(el.value);
+    });
     el.addEventListener('keydown', function (e) {
       if (!panel) return;
       var items = panel.children;
@@ -142,7 +156,9 @@
       var items = panel ? panel.children : [];
       for (var i = 0; i < items.length; i++) items[i].classList.toggle('hover', i === idx);
     }
-    el.addEventListener('blur', function () { setTimeout(close, 120); });
+    el.addEventListener('blur', function () {
+      setTimeout(function () { close(); el.readOnly = true; }, 120); // 失焦关闭并恢复只读
+    });
   };
 
   function esc(s) {

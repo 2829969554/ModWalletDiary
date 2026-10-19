@@ -9,8 +9,10 @@
     record: { title: '我要记账', render: function () { global.Pages.record.render(); } },
     names: { title: '款项名目', render: function () { global.Pages.names.render(); } },
     tools: { title: '支付工具', render: function () { global.Pages.tools.render(); } },
+    accounts: { title: '账户管理', render: function () { global.Pages.accounts.render(); } },
     stats: { title: '统计', render: function () { global.Pages.stats.render(); } },
-    manage: { title: '管理', render: function () { global.Pages.manage.render(); } }
+    manage: { title: '管理', render: function () { global.Pages.manage.render(); } },
+    settings: { title: '设置', render: function () { global.Pages.settings.render(); } }
   };
   var current = 'dashboard';
 

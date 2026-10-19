@@ -4,7 +4,28 @@
  * / Arcticons GPL / Logos MIT 等），生成 js/brand-icons.js 本地内置。
  * 运行：node build-icons.mjs
  * ============================================================ */
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
+
+/* 品牌官方色：simple-icons 数据（si-tmp.json）自动取色，非 simple-icons 来源用手工色 */
+const SI_DATA = (() => {
+  try { return JSON.parse(readFileSync(new URL('./si-tmp.json', import.meta.url), 'utf8')); }
+  catch (e) { return []; }
+})();
+const SI_TITLES = {
+  alipay: 'Alipay', wechat: 'WeChat', tencentqq: 'QQ', taobao: 'Taobao',
+  meituan: 'Meituan', xiaohongshu: 'Xiaohongshu', baidu: 'Baidu',
+  neteasecloudmusic: 'NetEase Cloud Music', huawei: 'Huawei', xiaomi: 'Xiaomi',
+  applepay: 'Apple Pay', apple: 'Apple', paypal: 'PayPal', visa: 'Visa',
+  mastercard: 'MasterCard', stripe: 'Stripe', starbucks: 'Starbucks',
+  kfc: 'KFC', mcdonalds: "McDonald's", steam: 'Steam', kuaishou: 'Kuaishou',
+  douyin: 'TikTok'
+};
+const MANUAL_COLORS = {
+  wechatpay: '07C160', pinduoduo: 'E02E24', jdcom: 'E1251B', jdfinance: 'E1251B',
+  eleme: '0085FF', icbc: 'C8000B', boc: 'A6001A', agbank: '009944',
+  ccbank: '0066B3', cmbank: 'D22630', didi: 'FF7E33', vipshop: 'E4007F',
+  luckincoffee: '1D3F94', microsoft: '00A4EF', unionpay: ''
+};
 
 const ICONS = [
   { slug: 'alipay',    tries: ['simple-icons/alipay'] },
@@ -33,7 +54,7 @@ const ICONS = [
   { slug: 'mastercard', tries: ['simple-icons/mastercard'] },
   { slug: 'stripe',    tries: ['simple-icons/stripe'] },
   { slug: 'starbucks', tries: ['simple-icons/starbucks'] },
-  { slug: 'luckincoffee', tries: ['simple-icons/luckincoffee'] },
+  { slug: 'luckincoffee', tries: ['arcticons/luckin-coffee', 'simple-icons/luckincoffee'] },
   { slug: 'kfc',       tries: ['simple-icons/kfc'] },
   { slug: 'mcdonalds', tries: ['simple-icons/mcdonalds'] },
   { slug: 'steam',     tries: ['simple-icons/steam'] },
@@ -72,8 +93,15 @@ for (const it of ICONS) {
     if (got) { used = p; break; }
   }
   if (got) {
-    db[it.slug] = got;
-    report.push(`OK   ${it.slug}  <- ${used}  vb=${got.vb}  ${got.s.length}B`);
+    // 官方品牌色：simple-icons 来源查数据表，其余用手工色；logos 多色标不置色
+    let c = '';
+    if (used.startsWith('logos/')) c = '';
+    else if (SI_TITLES[it.slug] && used.startsWith('simple-icons/')) {
+      const found = SI_DATA.find(x => x.title === SI_TITLES[it.slug]);
+      c = found ? found.hex : (MANUAL_COLORS[it.slug] || '');
+    } else c = MANUAL_COLORS[it.slug] || '';
+    db[it.slug] = { vb: got.vb, s: got.s, c: c };
+    report.push(`OK   ${it.slug}  <- ${used}  vb=${got.vb}  #${c || '(multi)'}  ${got.s.length}B`);
   } else {
     report.push(`MISS ${it.slug}`);
   }
@@ -90,8 +118,8 @@ out += ' * ============================================================ */\n';
 out += '(function (global) {\n  \'use strict\';\n';
 out += '  global.BRAND_DB = {\n';
 for (const slug of Object.keys(db)) {
-  const { vb, s } = db[slug];
-  out += '    ' + JSON.stringify(slug) + ': { vb: ' + JSON.stringify(vb) + ', s: ' + JSON.stringify(s) + ' },\n';
+  const { vb, s, c } = db[slug];
+  out += '    ' + JSON.stringify(slug) + ': { vb: ' + JSON.stringify(vb) + ', s: ' + JSON.stringify(s) + ', c: ' + JSON.stringify(c) + ' },\n';
 }
 out += '  };\n})(window);\n';
 

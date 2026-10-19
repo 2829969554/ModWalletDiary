@@ -149,7 +149,7 @@
     });
   }
 
-  // 给一个容器填充 logo：优先品牌 SVG，否则随机色 + 首字
+  // 给一个容器填充 logo：优先品牌 SVG（官方品牌色），否则随机色 + 首字
   function fillLogo(el, name) {
     if (!el) return;
     var info = matchPlatform(name);
@@ -160,7 +160,7 @@
         if (data) {
           el.innerHTML = '<svg viewBox="' + data.vb + '" fill="currentColor" width="60%" height="60%">' + data.s + '</svg>';
           el.style.background = '#fff';
-          el.style.color = '#1e2233';
+          el.style.color = data.c ? '#' + data.c : '#1e2233'; // 品牌官方色（logos 多色标自带颜色不受影响）
         } else {
           setFallback();
         }

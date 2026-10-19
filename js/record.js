@@ -1,6 +1,7 @@
 /* ============================================================
  * record.js — 我要记账：账单表单 + 最近账单表格
- * 字段：wid/wtime/wyear/wmon/wday/wtype/wname/wtool/wqtype/wpayname
+ * 字段：wid/wtime/wyear/wmon/wday/Wmoney(两位小数)/wamount(数值)
+ *       wtype/wname/wtool/wacct(交易账户)/wqtype/wpayname/wnote
  * ============================================================ */
 (function (global) {
   'use strict';
@@ -26,6 +27,12 @@
           '<button class="combo-arrow" tabindex="-1"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>' +
         '<div class="field"><label>支付工具（可从列表选，也可输入新工具）</label><div class="combo"><input type="text" id="rf-tool" placeholder="选择或输入支付工具">' +
           '<button class="combo-arrow" tabindex="-1"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>' +
+        '<div class="field"><label>交易账户（必选，从账户管理筛选）</label><select id="rf-acct">' +
+          '<option value="">请选择交易账户</option>' +
+          d.accounts.filter(function (a) { return !a.acchide; }).map(function (a) {
+            return '<option value="' + a.accid + '">' + global.UI.esc(a.accname) + '（' + global.UI.esc(a.acctype || '') + ' · ¥' + global.UI.fmtMoney(a.accmny) + '）</option>';
+          }).join('') +
+        '</select></div>' +
         '<div class="field"><label>交易路径</label>' +
           '<div class="radio-row">' +
             '<div class="radio-chip path on" data-v="1"><span class="dot"></span>线上</div>' +
@@ -64,21 +71,23 @@
 
     var nameInput = el.querySelector('#rf-name');
     var toolInput = el.querySelector('#rf-tool');
+    var acctSel = el.querySelector('#rf-acct');
     var payInput = el.querySelector('#rf-payname');
 
     // 款项名目下拉（可编辑选择，默认从款项名目选）
-    var pickedName = null;
     global.UI.combo(nameInput, function () {
       return d.mingmu.filter(function (m) { return !m.mhide; })
         .map(function (m) { return { v: m.mname, label: '编号 ' + m.mid }; });
-    }, function (v) { pickedName = v; });
+    }, null);
 
     // 支付工具下拉（可编辑选择，默认从支付工具选）
-    var pickedTool = null;
     global.UI.combo(toolInput, function () {
       return d.gongju.filter(function (q) { return !q.qhide; })
         .map(function (q) { return { v: q.qname, label: q.qtype }; });
-    }, function (v) { pickedTool = v; });
+    }, null);
+
+    // 交易账户：原生下拉选择框（不可编辑），从账户管理列表筛选
+    // （选项渲染时已生成，选中值在保存时读取 acctSel.value）
 
     // 商户名称下拉（可编辑 + 自定义）
     global.UI.combo(payInput, function () {
@@ -92,17 +101,21 @@
     // 保存
     el.querySelector('#rf-save').addEventListener('click', function () {
       var amount = parseFloat(el.querySelector('#rf-amount').value);
-      if (!amount || amount <= 0) { global.UI.toast('请输入正确金额', 'err'); return; }
+      if (!(amount > 0)) { global.UI.toast('请输入正确金额', 'err'); return; }
+      amount = Math.round(amount * 100) / 100;
       var nameVal = nameInput.value.trim();
       var toolVal = toolInput.value.trim();
       if (!nameVal) { global.UI.toast('请选择款项名目', 'err'); return; }
       if (!toolVal) { global.UI.toast('请选择支付工具', 'err'); return; }
+      // 交易账户：必选
+      var acctId = +acctSel.value || 0;
+      if (!acctId) { global.UI.toast('请选择交易账户', 'err'); return; }
 
       // 编号下拉式可编辑选择框：输入的新名目/新工具自动创建
       var mid = findMid(d, nameVal);
       if (!mid) { global.DB.addMingmu(nameVal); mid = global.DB.nextMid() - 1; }
       var qid = findQid(d, toolVal);
-      if (!qid) { global.DB.addGongju(toolVal, '自定义'); qid = global.DB.nextQid() - 1; }
+      if (!qid) { global.DB.addGongju(toolVal, '自定义', 0, ''); qid = global.DB.nextQid() - 1; }
 
       var payname = (payInput.value || '').trim();
       if (payname) global.DB.addShanghu(payname);
@@ -111,9 +124,9 @@
       var bill = {
         wtime: fmtTime(t),
         wyear: t.getFullYear(), wmon: t.getMonth() + 1, wday: t.getDate(),
-        wtype: wtype, wname: mid, wtool: qid, wqtype: wqtype,
+        Wmoney: amount.toFixed(2), wamount: amount,
+        wtype: wtype, wname: mid, wtool: qid, wacct: acctId, wqtype: wqtype,
         wpayname: payname,
-        wamount: Math.round(amount * 100) / 100,
         wnote: el.querySelector('#rf-note').value.trim()
       };
 
@@ -135,8 +148,8 @@
 
     function resetForm() {
       editingWid = null;
-      pickedName = null; pickedTool = null;
       nameInput.value = ''; toolInput.value = '';
+      acctSel.value = '';
       el.querySelector('#rf-amount').value = ''; el.querySelector('#rf-note').value = '';
       timeInput.value = toLocalInput(new Date());
       el.querySelector('#rf-title').textContent = '记一笔';
@@ -154,18 +167,20 @@
       if (!b) return;
       editingWid = wid;
       timeInput.value = (b.wtime || '').length > 10 ? b.wtime.replace(' ', 'T') : b.wtime + 'T12:00';
-      el.querySelector('#rf-amount').value = b.wamount;
+      el.querySelector('#rf-amount').value = Number(b.wamount) || 0;
       el.querySelector('#rf-note').value = b.wnote || '';
       payInput.value = b.wpayname || '';
-      nameInput.value = global.DB.mingmuName(b.wname); pickedName = nameInput.value;
-      toolInput.value = global.DB.gongjuName(b.wtool); pickedTool = toolInput.value;
+      nameInput.value = global.DB.mingmuName(b.wname);
+      toolInput.value = global.DB.gongjuName(b.wtool);
+      var wv = String(b.wacct || 0);
+      acctSel.value = acctSel.querySelector('option[value="' + wv + '"]') ? wv : ''; // 旧账单无账户时须手动选择
       wtype = b.wtype; wqtype = b.wqtype || 2;
       el.querySelectorAll('.radio-chip.income,.radio-chip.expense').forEach(function (c) { c.classList.toggle('on', +c.dataset.v === wtype); });
       el.querySelectorAll('.radio-chip.path').forEach(function (c) { c.classList.toggle('on', +c.dataset.v === wqtype); });
       el.querySelector('#rf-title').textContent = '编辑账单 #' + wid;
       el.querySelector('#rf-cancel').style.display = 'block';
       el.querySelector('#rf-save').textContent = '更新账单';
-      el.querySelector('#pages').scrollTop = 0;
+      document.getElementById('pages').scrollTop = 0;
     };
 
     renderTable();
@@ -194,9 +209,9 @@
     if (!tbl) return;
     var list = d.walletdiary.slice().sort(function (a, b) { return (b.wtime || '').localeCompare(a.wtime || ''); }).slice(0, 30);
 
-    var html = '<thead><tr><th>序号</th><th>日期</th><th>类型</th><th>款项名目</th><th>支付工具</th><th>路径</th><th>商户</th><th style="text-align:right">金额</th><th>操作</th></tr></thead><tbody>';
+    var html = '<thead><tr><th>序号</th><th>日期</th><th>类型</th><th>款项名目</th><th>支付工具</th><th>交易账户</th><th>路径</th><th>商户</th><th style="text-align:right">金额</th><th>操作</th></tr></thead><tbody>';
     if (!list.length) {
-      html += '<tr><td colspan="9" class="empty-tip">暂无账单</td></tr>';
+      html += '<tr><td colspan="10" class="empty-tip">暂无账单</td></tr>';
     }
     list.forEach(function (b) {
       var isIn = b.wtype === 1;
@@ -206,9 +221,10 @@
         '<td>' + (isIn ? '<span class="c-green">收入</span>' : '<span class="c-red">支出</span>') + '</td>' +
         '<td>' + global.UI.esc(global.DB.mingmuName(b.wname)) + '</td>' +
         '<td><span class="cell-flex"><span class="row-logo" data-tool="' + global.UI.esc(global.DB.gongjuName(b.wtool)) + '"></span>' + global.UI.esc(global.DB.gongjuName(b.wtool)) + '</span></td>' +
+        '<td>' + global.UI.esc(global.DB.accountName(b.wacct) || '-') + '</td>' +
         '<td>' + (b.wqtype === 1 ? '线上' : '线下') + '</td>' +
         '<td>' + global.UI.esc(b.wpayname || '-') + '</td>' +
-        '<td class="num" style="text-align:right" class="num">' + (isIn ? '<span class="c-green">+' : '<span class="c-red">-') + global.UI.fmtMoney(b.wamount) + '</span></td>' +
+        '<td class="num" style="text-align:right">' + (isIn ? '<span class="c-green">+' : '<span class="c-red">-') + global.UI.fmtMoney(b.wamount) + '</span></td>' +
         '<td><div class="op-btns">' +
           '<button class="op-btn" title="编辑" onclick="window._rfEdit(' + b.wid + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>' +
           '<button class="op-btn del" title="删除" onclick="window._rfDel(' + b.wid + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>' +

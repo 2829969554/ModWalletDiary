@@ -6,7 +6,7 @@
 <meta name="format-detection" content="telephone=no">
 <title>ModWalletDiary · 钱包日记</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%236366f1'/%3E%3Cpath d='M12 17a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z' fill='%23fff'/%3E%3Cpath d='M32 22h6v6h-6a3 3 0 0 1 0-6z' fill='%23a5b4fc'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=20261019k">
 </head>
 <body>
 
@@ -80,6 +80,10 @@
         <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/><path d="M6 15h4"/></svg></span>
         <span class="txt">支付工具</span>
       </a>
+      <a href="javascript:;" data-page="accounts" class="nav-item" title="账户管理">
+        <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/><circle cx="16" cy="15" r="1"/></svg></span>
+        <span class="txt">账户管理</span>
+      </a>
       <a href="javascript:;" data-page="stats" class="nav-item" title="统计">
         <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20V10"/><path d="M12 20V4"/><path d="M18 20v-7"/></svg></span>
         <span class="txt">统计</span>
@@ -87,6 +91,10 @@
       <a href="javascript:;" data-page="manage" class="nav-item" title="管理">
         <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21v-6"/><path d="M4 11V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-4"/><path d="M20 13V3"/><circle cx="4" cy="13" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="15" r="2"/></svg></span>
         <span class="txt">管理</span>
+      </a>
+      <a href="javascript:;" data-page="settings" class="nav-item" title="设置">
+        <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        <span class="txt">设置</span>
       </a>
     </nav>
     <div class="side-foot">
@@ -112,8 +120,10 @@
       <section id="page-record" class="page" hidden></section>
       <section id="page-names" class="page" hidden></section>
       <section id="page-tools" class="page" hidden></section>
+      <section id="page-accounts" class="page" hidden></section>
       <section id="page-stats" class="page" hidden></section>
       <section id="page-manage" class="page" hidden></section>
+      <section id="page-settings" class="page" hidden></section>
     </div>
   </main>
 </div>
@@ -123,18 +133,21 @@
   <div id="modal" role="dialog"></div>
 </div>
 
-<script src="lib/crypto-js.min.js"></script>
-<script src="lib/chart.umd.min.js"></script>
-<script src="js/brand-icons.js"></script>
-<script src="js/icons.js"></script>
-<script src="js/storage.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/record.js"></script>
-<script src="js/names.js"></script>
-<script src="js/tools.js"></script>
-<script src="js/stats.js"></script>
-<script src="js/manage.js"></script>
-<script src="js/app.js"></script>
+<script src="lib/crypto-js.min.js?v=20261019k"></script>
+<script src="lib/chart.umd.min.js?v=20261019k"></script>
+<script src="lib/solarlunar.min.js?v=20261019k"></script>
+<script src="js/brand-icons.js?v=20261019k"></script>
+<script src="js/icons.js?v=20261019k"></script>
+<script src="js/storage.js?v=20261019k"></script>
+<script src="js/ui.js?v=20261019k"></script>
+<script src="js/dashboard.js?v=20261019k"></script>
+<script src="js/record.js?v=20261019k"></script>
+<script src="js/names.js?v=20261019k"></script>
+<script src="js/tools.js?v=20261019k"></script>
+<script src="js/accounts.js?v=20261019k"></script>
+<script src="js/stats.js?v=20261019k"></script>
+<script src="js/manage.js?v=20261019k"></script>
+<script src="js/settings.js?v=20261019k"></script>
+<script src="js/app.js?v=20261019k"></script>
 </body>
 </html>
