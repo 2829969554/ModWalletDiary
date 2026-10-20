@@ -1,3 +1,7 @@
+
+//            "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+//            "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+//            "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
 {
     "name" : "钱包日记",
     "appid" : "__UNI__MODWALLETDIARY",
@@ -8,21 +12,28 @@
         "launch_path" : "index.html",
         "distribute" : {
             "android" : {
-                "permissions" : [
-                    "<uses-permission android:name=\"android.permission.INTERNET\"/>",
-                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
-                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
-                ]
+                "permissions" : []
             }
         }
     },
     "id" : "H55774A36",
     "version" : {
-        "name" : "1.2",
+        "name" : "1.0.0",
         "code" : 2
     },
     "launch_path" : "index.html",
+    "developer" : {
+        /*开发者名称*/
+        "name" : "@ModGoSir",
+        /*开发者邮箱地址*/
+        "email" : "2829969554@qq.com",
+        /*开源项目地址*/
+        "url" : "https://gitee.com/wxgshuju/ModWalletDiary"
+    },
     "plus" : {
+        "statusbar" : {
+            "immersed" : true
+        },
         "distribute" : {
             "icons" : {
                 "android" : {
@@ -58,18 +69,79 @@
             },
             "google" : {
                 "minSdkVersion" : 21,
-                "abiFilters" : [ "armeabi-v7a", "arm64-v8a", "x86" ]
+                "abiFilters" : [ "armeabi-v7a", "arm64-v8a", "x86" ],
+                "excludePermissions" : [
+                    "    <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"  tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"       tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_MEDIA_VIDEO\"       tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_MEDIA_VISUAL_USER_SELECTED\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ACCESS_MEDIA_LOCATION\"  tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_PHONE_STATE\"       tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"   tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"      tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.INSTALL_PACKAGES\"       tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.REQUEST_INSTALL_PACKAGES\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.CALL_PHONE\"             tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_CONTACTS\"          tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.WRITE_CONTACTS\"         tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.CAMERA\"           tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.RECORD_AUDIO\"           tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\"   tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_MEDIA_AUDIO\"       tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"     tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_CALL_LOG\"            tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.WRITE_CALL_LOG\"           tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ADD_VOICEMAIL\"           tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.USE_SIP\"                  tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.PROCESS_OUTGOING_CALLS\"   tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ANSWER_PHONE_CALLS\"      tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_PHONE_NUMBERS\"      tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.SEND_SMS\"        tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.RECEIVE_SMS\"     tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.READ_SMS\"        tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.RECEIVE_WAP_PUSH\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.RECEIVE_MMS\"      tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.SEND_MMS\"         tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.CHANGE_WIFI_STATE\"      tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.ACCESS_BACKGROUND_LOCATION\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.huawei.android.launcher.permission.CHANGE_BADGE\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.vivo.notification.permission.BADGE_ICON\"        tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.oplus.notification.permission.BADGE_ICON\"       tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.sonyericsson.home.permission.BROADCAST_BADGE\"   tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.BLUETOOTH\"         tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.BLUETOOTH_ADMIN\"   tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"android.permission.NFC\"               tools:node=\"remove\"/>",
+                    "    <uses-feature android:name=\"android.hardware.camera\"              android:required=\"false\" tools:node=\"remove\"/>",
+                    "    <uses-feature android:name=\"android.hardware.camera.autofocus\"    android:required=\"false\" tools:node=\"remove\"/>",
+                    "    <uses-feature android:name=\"android.hardware.microphone\"          android:required=\"false\" tools:node=\"remove\"/>",
+                    "    <uses-feature android:name=\"android.hardware.location\"            android:required=\"false\" tools:node=\"remove\"/>",
+                    "    <uses-feature android:name=\"android.hardware.bluetooth\"           android:required=\"false\" tools:node=\"remove\"/>",
+                    "    <uses-feature android:name=\"android.hardware.nfc\"                 android:required=\"false\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.asus.msa.SupplementaryDID.ACCESS\"  tools:node=\"remove\" />",
+                    "    <uses-permission android:name=\"android.permission.INTERNET\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.android.launcher.permission.INSTALL_SHORTCUT\" tools:node=\"remove\"/>",
+                    "    <uses-permission android:name=\"com.android.launcher.permission.UNINSTALL_SHORTCUT\" tools:node=\"remove\"/>",
+                    "   <uses-permission android:name=\"android.permission.GET_ACCOUNTS\" tools:node=\"remove\"/>",
+                    "   <uses-permission android:name=\"android.permission.USE_FINGERPRINT\"  tools:node=\"remove\"/>",
+                    "   <uses-permission android:name=\"android.permission.FOREGROUND_SERVICE\"  tools:node=\"remove\"/>"
+                ]
             },
             "apple" : {
                 "idfa" : false
             },
             "ios" : {
-                "dSYMs" : false
+                "dSYMs" : true
+            },
+            "splashscreen" : {
+                "useOriginalMsgbox" : true
             }
         },
         "splashscreen" : {
             "autoclose" : true,
             "waiting" : true
         }
-    }
+    },
+    "screenOrientation" : [ "portrait-primary" ]
 }
