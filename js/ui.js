@@ -6,6 +6,23 @@
 
   var UI = {};
 
+  /* ---------- 显示模式（主题） ----------
+   * auto：白天 7:00-18:00 浅色，夜晚 18:00-7:00 深色（按时间解析为具体模式）
+   * light：浅色；dark：深色
+   * 实现：解析后把具体主题写入 <html data-theme="light|dark">
+   */
+  UI.applyTheme = function (mode) {
+    mode = mode || 'auto';
+    var t;
+    if (mode === 'dark') t = 'dark';
+    else if (mode === 'light') t = 'light';
+    else {
+      var h = new Date().getHours();
+      t = (h >= 18 || h < 7) ? 'dark' : 'light'; // 自动：7:00-18:00 浅色
+    }
+    document.documentElement.setAttribute('data-theme', t);
+  };
+
   /* ---------- Toast ---------- */
   var toastTimer = null;
   UI.toast = function (msg, type) {

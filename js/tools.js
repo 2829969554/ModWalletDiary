@@ -145,7 +145,7 @@
     el.querySelector('#tl-fab').addEventListener('click', openAddModal);
 
     function tblHtml(list, isHidden) {
-      var html = '<thead><tr><th>序号 qid</th><th>交易工具类型</th><th>工具名称</th><th>卡号</th><th>使用笔数</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+      var html = '<thead><tr><th>序号</th><th>交易工具类型</th><th>工具名称</th><th>卡号</th><th>使用笔数</th><th>状态</th><th>操作</th></tr></thead><tbody>';
       if (!list.length) html += '<tr><td colspan="7" class="empty-tip">暂无</td></tr>';
       list.forEach(function (q) {
         var cnt = d.walletdiary.filter(function (b) { return b.wtool === q.qid; }).length;

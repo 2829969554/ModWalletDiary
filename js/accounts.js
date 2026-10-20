@@ -9,11 +9,20 @@
 
   var ACCT_TYPES = ['余额', '零钱', '零钱通', '余额宝', '数字人民币', '现金', '借记卡', '信用卡', '花呗', '分付', '月付', '白条', '金条'];
 
-  function debtOf(a) {
-    var limit = Number(a.acclimit) || 0;
-    if (!global.DB.isCreditAcct(a.acctype) || limit <= 0) return 0;
-    return Math.max(0, limit - (Number(a.accmny) || 0));
-  }
+    function debtOf(a) {
+      var limit = Number(a.acclimit) || 0;
+      if (!global.DB.isCreditAcct(a.acctype) || limit <= 0) return 0;
+      return Math.max(0, limit - (Number(a.accmny) || 0));
+    }
+
+    // 名称允许重复；「名称 + 卡号」组合不能重复（excludeAccid 用于编辑时排除自身）
+    function dupCombo(name, uid, excludeAccid) {
+      var u = String(uid || '').trim();
+      return global.DB.get().accounts.some(function (a) {
+        if (excludeAccid && a.accid === excludeAccid) return false;
+        return a.accname === name && String(a.accuid || '').trim() === u && !a.acchide;
+      });
+    }
 
   function render() {
     var el = document.getElementById('page-accounts');
@@ -26,18 +35,28 @@
       return global.DB.isCreditAcct(a.acctype) ? s : s + (Number(a.accmny) || 0);
     }, 0);
     var totalDebt = d.accounts.reduce(function (s, a) { return s + debtOf(a); }, 0);
+    // 总授信 = 信用类账户额度之和；名称相同但卡号不同的计为同一条授信，只取一次（去重取最大额度）
+    var creditByName = {};
+    d.accounts.forEach(function (a) {
+      if (global.DB.isCreditAcct(a.acctype) && (Number(a.acclimit) || 0) > 0) {
+        var lim = Number(a.acclimit) || 0;
+        if (!creditByName[a.accname] || lim > creditByName[a.accname]) creditByName[a.accname] = lim;
+      }
+    });
+    var totalCredit = Object.keys(creditByName).reduce(function (s, k) { return s + creditByName[k]; }, 0);
 
     el.innerHTML =
       '<div class="card asset-strip">' +
-        '<div class="as-left">' +
+        '<div class="as-grid">' +
           '<div class="as-block"><span class="as-label">总资产</span>' +
             '<span class="as-val" style="color:' + (totalAssets >= 0 ? '#fff' : '#fecdd3') + '">¥ ' + global.UI.fmtMoney(totalAssets) + '</span></div>' +
-          '<div class="as-sep"></div>' +
           '<div class="as-block"><span class="as-label">负债</span>' +
             '<span class="as-val">¥ ' + global.UI.fmtMoney(totalDebt) + '</span></div>' +
+          '<div class="as-block"><span class="as-label">总授信</span>' +
+            '<span class="as-val">¥ ' + global.UI.fmtMoney(totalCredit) + '</span></div>' +
+          '<div class="as-act"><button id="ac-transfer" class="btn-primary" style="height:40px">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><path d="M17 3l4 4-4 4"/><path d="M21 7H9"/><path d="M7 21l-4-4 4-4"/><path d="M3 17h12"/></svg>转账</button></div>' +
         '</div>' +
-        '<button id="ac-transfer" class="btn-primary" style="height:40px">' +
-          '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:4px"><path d="M17 3l4 4-4 4"/><path d="M21 7H9"/><path d="M7 21l-4-4 4-4"/><path d="M3 17h12"/></svg>转账</button>' +
       '</div>' +
 
       '<div class="card tl-add-card">' +
@@ -108,8 +127,10 @@
         onOk: function () {
           var v = body.querySelector('#md-ac-name').value.trim();
           if (!v) { global.UI.toast('请输入账户名称', 'err'); return false; }
-          if (d.accounts.some(function (a) { return a.accname === v && !a.acchide; })) {
-            global.UI.toast('该账户已存在', 'err'); return false;
+          var uid = body.querySelector('#md-ac-uid').value.trim();
+          if (dupCombo(v, uid)) {
+            global.UI.toast('「' + v + (uid ? ' - ' + uid : '') + '」已存在：账户名称可重复，但名称+卡号组合不能重复', 'err');
+            return false;
           }
           var isC = global.DB.isCreditAcct(body.querySelector('#md-ac-type').value);
           var day = parseInt(body.querySelector('#md-ac-day').value, 10) || 0;
@@ -119,7 +140,7 @@
             if (!(limit > 0)) { global.UI.toast('信用类账户需填写信用额度', 'err'); return false; }
           }
           global.DB.addAccount(v, body.querySelector('#md-ac-type').value,
-            body.querySelector('#md-ac-uid').value.trim(), parseFloat(body.querySelector('#md-ac-mny').value) || 0,
+            uid, parseFloat(body.querySelector('#md-ac-mny').value) || 0,
             isC ? day : 0, isC ? limit : 0);
           global.UI.toast('已添加「' + v + '」', 'ok');
           render();
@@ -130,8 +151,10 @@
     function addInline() {
       var v = el.querySelector('#ac-input').value.trim();
       if (!v) { global.UI.toast('请输入账户名称', 'err'); return; }
-      if (d.accounts.some(function (a) { return a.accname === v && !a.acchide; })) {
-        global.UI.toast('该账户已存在', 'err'); return;
+      var uid = el.querySelector('#ac-uid').value.trim();
+      if (dupCombo(v, uid)) {
+        global.UI.toast('「' + v + (uid ? ' - ' + uid : '') + '」已存在：账户名称可重复，但名称+卡号组合不能重复', 'err');
+        return;
       }
       var type = el.querySelector('#ac-type').value;
       var isC = global.DB.isCreditAcct(type);
@@ -141,7 +164,7 @@
         if (!(day >= 1 && day <= 31)) { global.UI.toast('信用类账户需填写账单日（1-31）', 'err'); return; }
         if (!(limit > 0)) { global.UI.toast('信用类账户需填写信用额度', 'err'); return; }
       }
-      global.DB.addAccount(v, type, el.querySelector('#ac-uid').value.trim(),
+      global.DB.addAccount(v, type, uid,
         parseFloat(el.querySelector('#ac-mny').value) || 0, isC ? day : 0, isC ? limit : 0);
       global.UI.toast('已添加「' + v + '」', 'ok');
       render();
@@ -238,17 +261,23 @@
         var cnt = d.walletdiary.filter(function (b) { return b.wacct === a.accid; }).length;
         var mny = Number(a.accmny) || 0;
         var dbt = debtOf(a);
+        var isCreditAcc = global.DB.isCreditAcct(a.acctype);
         var mnyHtml = '<span style="font-weight:700;color:' + (dbt > 0 ? 'var(--red)' : (mny >= 0 ? 'var(--green)' : 'var(--red)')) + '">¥ ' + global.UI.fmtMoney(mny) + '</span>';
-        if (global.DB.isCreditAcct(a.acctype)) {
+        if (isCreditAcc) {
           mnyHtml += '<small style="display:block;color:var(--muted);font-size:11px;margin-top:2px">额度 ¥' + global.UI.fmtMoney(a.acclimit) +
             (dbt > 0 ? ' · 负债 ¥' + global.UI.fmtMoney(dbt) : '') +
             (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</small>';
         }
+        var uidStr = String(a.accuid || '');
+        var uidLast4 = uidStr.replace(/\D/g, '').slice(-4) || uidStr.slice(-4);
+        var uidHtml = a.accuid
+          ? '<span class="uid-full">' + global.UI.esc(a.accuid) + '</span><span class="uid-last">尾号 ' + global.UI.esc(uidLast4) + '</span>'
+          : '-';
         html += '<tr' + (isHidden ? ' class="hidden-row"' : '') + '>' +
           '<td class="num c-muted">' + a.accid + '</td>' +
           '<td>' + global.UI.esc(a.accname) + '</td>' +
-          '<td>' + global.UI.esc(a.acctype || '余额') + '</td>' +
-          '<td class="num">' + global.UI.esc(a.accuid || '-') + '</td>' +
+          '<td>' + global.UI.esc(a.acctype || '余额') + '<span class="typ-last">' + (a.accuid ? ' (尾号 ' + global.UI.esc(uidLast4) + ')' : '') + '</span></td>' +
+          '<td class="num acct-uid' + (isCreditAcc ? ' acct-uid-credit' : '') + '">' + uidHtml + '</td>' +
           '<td style="text-align:right">' + mnyHtml + '</td>' +
           '<td class="num">' + cnt + ' 笔</td>' +
           '<td>' + (isHidden ? '<span class="c-muted">已隐藏</span>' : '<span style="color:var(--green)">显示中</span>') + '</td>' +
@@ -257,7 +286,15 @@
             (isHidden
               ? '<button class="op-btn" title="恢复显示" data-act="restore" data-id="' + a.accid + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>'
               : '<button class="op-btn del" title="隐藏" data-act="hide" data-id="' + a.accid + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.9 18.1C16.4 19.3 14.3 20 12 20c-6.5 0-10-7-10-7 1-2 2.4-3.7 4-4.9"/><path d="M9.9 4.2A10 10 0 0 1 12 4c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3"/><path d="M3 3l18 18"/></svg></button>') +
-          '</div></td></tr>';
+          '</div></td>' +
+          // 信用类账户：行尾追加明细单元格（手机端显示一行：左额度 / 右负债+账单日）
+          (isCreditAcc
+            ? '<td class="acct-credit-cell">' +
+                '<span class="cs-left">信用额度 ¥' + global.UI.fmtMoney(a.acclimit) + '</span>' +
+                '<span class="cs-right">负债 ¥' + global.UI.fmtMoney(dbt) + (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</span>' +
+              '</td>'
+            : '') +
+          '</tr>';
       });
       html += '</tbody>';
       return html;
@@ -305,12 +342,17 @@
               var type = body.querySelector('#md-ac-type').value;
               var day = parseInt(body.querySelector('#md-ac-day').value, 10) || 0;
               var limit = parseFloat(body.querySelector('#md-ac-limit').value) || 0;
+              var uid = body.querySelector('#md-ac-uid').value.trim();
+              if (dupCombo(v, uid, a.accid)) {
+                global.UI.toast('「' + v + (uid ? ' - ' + uid : '') + '」已存在：账户名称可重复，但名称+卡号组合不能重复', 'err');
+                return false;
+              }
               if (global.DB.isCreditAcct(type)) {
                 if (!(day >= 1 && day <= 31)) { global.UI.toast('信用类账户需填写账单日（1-31）', 'err'); return false; }
                 if (!(limit > 0)) { global.UI.toast('信用类账户需填写信用额度', 'err'); return false; }
               }
               var mny = parseFloat(body.querySelector('#md-ac-mny').value);
-              global.DB.renameAccount(a.accid, v, type, body.querySelector('#md-ac-uid').value.trim(), day, limit,
+              global.DB.renameAccount(a.accid, v, type, uid, day, limit,
                 isNaN(mny) ? 0 : Math.round(mny * 100) / 100);
               global.UI.toast('已更新', 'ok');
               render();

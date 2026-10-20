@@ -21,9 +21,10 @@
   --side-w: 216px;
   --side-mini: 64px;
   --topbar-h: 58px;
+  color-scheme: light; /* 原生日期控件按浅色渲染 */
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #12141c;
     --card: #1c1f2b;
     --ink: #e8eaf2;
@@ -34,6 +35,36 @@
     --shadow: 0 4px 16px rgba(0, 0, 0, .35);
     --shadow-lg: 0 12px 40px rgba(0, 0, 0, .5);
   }
+}
+/* 手动切换：设置页「显示模式」写入 html[data-theme] */
+:root[data-theme="dark"] {
+  --bg: #12141c;
+  --card: #1c1f2b;
+  --ink: #e8eaf2;
+  --ink2: #a6abbd;
+  --muted: #6b7183;
+  --line: #2a2e3d;
+  --brand-soft: #262a44;
+  --shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, .5);
+  color-scheme: dark; /* 原生日历弹层/控件按深色渲染 */
+}
+
+/* 日期/时间选择框美化 */
+input[type="date"], input[type="datetime-local"], input[type="month"], input[type="week"] {
+  font-variant-numeric: tabular-nums;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: .55;
+  transition: opacity .15s;
+}
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="month"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -74,6 +105,10 @@ input, select { font-family: inherit; }
 }
 @keyframes pop { from { transform: scale(.94) translateY(14px); opacity: 0; } }
 .auth-title { font-size: 22px; margin-top: 12px; letter-spacing: .5px; }
+.auth-appname {
+  font-size: 19px; font-weight: 700; color: var(--brand);
+  letter-spacing: 9px; text-indent: 9px; margin-top: 6px;
+}
 .auth-sub { color: var(--ink2); font-size: 12px; margin: 6px 0 18px; }
 .auth-tip { color: var(--ink2); font-size: 14px; margin-bottom: 16px; line-height: 1.7; }
 .auth-tip small { color: var(--muted); font-size: 11px; }
@@ -111,7 +146,7 @@ input, select { font-family: inherit; }
 
 .field { margin-bottom: 14px; }
 .field > label { display: block; font-size: 12.5px; color: var(--ink2); margin-bottom: 6px; font-weight: 600; }
-.field input[type="text"], .field input[type="date"], .field input[type="number"], .field input[type="password"], .field select {
+.field input[type="text"], .field input[type="date"], .field input[type="datetime-local"], .field input[type="month"], .field input[type="number"], .field input[type="password"], .field select {
   width: 100%; height: 42px;
   border: 1.5px solid var(--line); border-radius: 11px;
   padding: 0 12px; font-size: 14px;
@@ -120,6 +155,29 @@ input, select { font-family: inherit; }
 }
 .field input:focus, .field select:focus { border-color: var(--brand); }
 .field input[readonly] { background: var(--brand-soft); cursor: pointer; }
+
+/* 记账页保存按钮行 */
+.rf-actions { display: flex; gap: 10px; margin-top: 18px; }
+
+/* 手机端：记一笔表单纵向紧凑；记账时间 / 金额 / 记账类型 与输入框同一行 */
+@media (max-width: 768px) {
+  .field.field-row { display: flex; align-items: center; gap: 10px; }
+  .field.field-row > label { margin-bottom: 0; flex: none; min-width: 64px; }
+  .field.field-row > input { flex: 1; min-width: 0; }
+  .field.field-row > .radio-row { flex: 1; min-width: 0; }
+
+  #page-record .card { padding: 14px; }
+  #page-record .field, .qr-form .field { margin-bottom: 9px; }
+  #page-record .field > label, .qr-form .field > label { margin-bottom: 4px; }
+  #page-record .field input[type="text"], #page-record .field input[type="datetime-local"], #page-record .field input[type="number"], #page-record .field select,
+  .qr-form .field input[type="text"], .qr-form .field input[type="datetime-local"], .qr-form .field input[type="number"], .qr-form .field select { height: 38px; }
+  #page-record .radio-chip, .qr-form .radio-chip { height: 38px; }
+  #page-record .rf-actions { margin-top: 10px; }
+  #page-record .rf-actions .btn-primary { height: 42px; }
+  #page-record .rf-actions .btn-ghost { height: 38px; }
+  #modal { padding: 18px; }
+  #modal .modal-btns { margin-top: 12px; }
+}
 
 .radio-row { display: flex; gap: 10px; }
 .radio-chip {
@@ -453,11 +511,104 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 .stat-sum .ss-val.green { color: var(--green); }
 .stat-sum .ss-val.red { color: var(--red); }
 
+/* 手机端：账户列表紧凑（名称/类型+尾号 双行；删除独立卡号列） */
+.uid-last { display: none; }
+.typ-last { color: var(--muted); font-weight: 400; font-size: .9em; } /* 尾号叠加在账户类型后 */
+#page-accounts .tbl td.acct-credit-cell { display: none; } /* 信用明细单元格：默认（桌面端）隐藏 */
+@media (max-width: 768px) {
+  #page-accounts .table-wrap { border: none; }
+  #page-accounts .tbl { min-width: 0; font-size: 13px; display: block; width: 100%; table-layout: fixed; }
+  #page-accounts .tbl thead { display: none; }
+  #page-accounts .tbl tbody { display: block; width: 100%; }
+  #page-accounts .tbl tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto;
+    width: 100%;
+    gap: 2px 10px;
+    align-items: center;
+    padding: 8px 6px;
+    border-top: 1.5px solid color-mix(in srgb, var(--brand) 45%, var(--line)); /* 行间分割线加粗带强调色 */
+    box-sizing: border-box;
+    position: relative;
+  }
+  #page-accounts .tbl td { padding: 0; border: none; white-space: nowrap; }
+  #page-accounts .tbl td:nth-child(1),
+  #page-accounts .tbl td:nth-child(4),
+  #page-accounts .tbl td:nth-child(6),
+  #page-accounts .tbl td:nth-child(7) { display: none; }
+  #page-accounts .tbl td:nth-child(2) { grid-column: 1; grid-row: 1; font-weight: 600; }
+  #page-accounts .tbl td:nth-child(3) { grid-column: 1; grid-row: 2; color: var(--muted); font-size: 12px; }
+  #page-accounts .tbl td:nth-child(5) { grid-column: 2; grid-row: 1; text-align: right; font-size: 15px; font-weight: 700; }
+  #page-accounts .tbl td:nth-child(5) > small { display: none !important; }
+  #page-accounts .tbl td:nth-child(8) { grid-column: 3; grid-row: 1 / span 2; }
+  #page-accounts .op-btn { width: 24px; height: 24px; }
+  #page-accounts .op-btns { gap: 3px; }
+  #page-accounts .tbl tr td.empty-tip { grid-column: 1 / -1; grid-row: 1; text-align: center; padding: 18px 0; }
+
+  /* 信用类账户明细单元格：一行，左「信用额度」/ 右「负债+账单日」两端对齐 */
+  #page-accounts .tbl td.acct-credit-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--line);
+  }
+  #page-accounts .tbl td.acct-credit-cell .cs-left { flex: none; }
+  #page-accounts .tbl td.acct-credit-cell .cs-right { flex: 1; text-align: right; }
+}
+
+/* 手机端：统计汇总紧凑，总收入/总支出同列上下排 */
+@media (max-width: 600px) {
+  .stat-sums { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-sum { padding: 10px 12px; }
+  .stat-sum .ss-val { font-size: 16px; }
+  .stat-sums .ss-in { grid-column: 1; grid-row: 1; }
+  .stat-sums .ss-net { grid-column: 2; grid-row: 1; }
+  .stat-sums .ss-out { grid-column: 1; grid-row: 2; }
+  .stat-sums .ss-count { grid-column: 2; grid-row: 2; }
+
+  /* 手机端：按款项名目汇总表紧凑 —— 名目 | 支出(上)/收入(下) 同列 | 占比(含进度条) */
+  #st-result .table-wrap { border: none; }
+  #st-result .tbl { min-width: 0; font-size: 12.5px; }
+  #st-result .tbl thead { display: none; }
+  #st-result .tbl tr {
+    display: grid;
+    grid-template-columns: minmax(86px, 1fr) auto minmax(84px, 28%);
+    grid-template-rows: auto auto;
+    gap: 2px 10px;
+    align-items: center;
+    padding: 10px 8px;
+    border-top: 1px solid var(--line);
+  }
+  #st-result .tbl td { padding: 0; border: none; white-space: nowrap; }
+  #st-result .tbl td:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; white-space: normal; }
+  #st-result .tbl td:nth-child(1) .cell-flex { gap: 6px; }
+  #st-result .tbl td:nth-child(1) .row-logo { width: 24px; height: 24px; border-radius: 7px; }
+  #st-result .tbl td:nth-child(2) { grid-column: 2; grid-row: 1; text-align: right; }
+  #st-result .tbl td:nth-child(3) { grid-column: 2; grid-row: 2; text-align: right; }
+  #st-result .tbl td:nth-child(2)::before { content: "支 "; color: var(--muted); font-weight: 400; }
+  #st-result .tbl td:nth-child(3)::before { content: "收 "; color: var(--muted); font-weight: 400; }
+  #st-result .tbl td:nth-child(4) { grid-column: 3; grid-row: 1 / span 2; min-width: 0; }
+  #st-result .tbl td:nth-child(4) .progress-row { gap: 4px; }
+  #st-result .tbl td:nth-child(4) .pr-val { width: auto; font-size: 11px; }
+  #st-result .tbl tr td.empty-tip { grid-column: 1 / -1; grid-row: 1; text-align: center; padding: 20px 0; }
+}
+
 .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .progress-row .pr-name { width: 88px; flex: none; font-size: 12.5px; display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; }
 .pr-track { flex: 1; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
 .pr-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--brand), var(--brand2)); min-width: 2px; transition: width .4s ease; }
 .progress-row .pr-val { width: 92px; flex: none; text-align: right; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tbl td.st-pct { min-width: 140px; } /* 桌面端占比列宽 */
 
 /* ==================== 管理 ==================== */
 .manage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
@@ -480,16 +631,29 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 
 /* ==================== 账户总资产条 ==================== */
 .asset-strip {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  display: block; /* 内部用 as-grid 网格 */
   background: linear-gradient(135deg, var(--brand), var(--brand2));
   color: #fff;
 }
-.asset-strip .as-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.asset-strip .as-grid {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
 .asset-strip .as-block { display: flex; flex-direction: column; gap: 2px; }
 .asset-strip .as-label { font-size: 12px; opacity: .85; }
-.asset-strip .as-val { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.asset-strip .as-sep { width: 1px; height: 34px; background: rgba(255, 255, 255, .3); }
+.asset-strip .as-val { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; color: #fff; }
+.asset-strip .as-act { margin-left: auto; }
 .asset-strip .btn-primary { background: rgba(255, 255, 255, .2); box-shadow: none; }
+
+/* 手机端：总资产/负债 一行，总授信/转账按钮 一行 */
+@media (max-width: 768px) {
+  .asset-strip .as-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; align-items: center; }
+  .asset-strip .as-block:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .asset-strip .as-block:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .asset-strip .as-block:nth-child(3) { grid-column: 1; grid-row: 2; }
+  .asset-strip .as-act { grid-column: 2; grid-row: 2; margin-left: 0; text-align: left; }
+  .asset-strip .as-act .btn-primary { padding: 0 20px; }
+  .asset-strip .as-val { font-size: 18px; white-space: nowrap; }
+}
 
 /* 转账弹窗：账户明细 + 预览 */
 .tr-detail {
@@ -552,6 +716,29 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* ==================== 还款提醒横幅（仪表盘顶部） ==================== */
+/* 悬浮置顶层：固定在顶栏下方、悬浮于卡片之上，可叠多条，不占页面布局；
+ * 层级仅次于左侧菜单（#sidebar z-index:40），菜单展开时覆盖提醒 */
+.pay-alert-layer {
+  position: fixed;
+  top: calc(var(--topbar-h) + 12px + env(safe-area-inset-top));
+  left: calc(var(--side-w) + 18px);
+  right: 18px;
+  z-index: 39;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  transition: left .22s ease;
+}
+#sidebar.mini ~ #main .pay-alert-layer { left: calc(var(--side-mini) + 18px); }
+.pay-alert-layer .pay-alert { pointer-events: auto; margin-bottom: 0; }
+@media (max-width: 768px) {
+  .pay-alert-layer {
+    left: 12px; right: 12px;
+    top: calc(var(--topbar-h) + 10px + env(safe-area-inset-top));
+  }
+}
+
 .pay-alert {
   display: flex; align-items: center; gap: 12px;
   border-radius: var(--radius);
@@ -560,13 +747,30 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
   color: #fff;
   animation: pop .3s ease;
 }
+/* 还款提醒色阶：出账后橙黄起步，临近最晚还款日 7 天内逐渐加深偏红，逾期深红+橙 */
 .pay-alert.yellow {
-  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);   /* 刚出账：橙黄 */
   box-shadow: 0 8px 24px rgba(245, 158, 11, .35);
 }
+.pay-alert.orange {
+  background: linear-gradient(135deg, #f97316, #fbbf24);   /* 剩 8-7 天：橙 */
+  box-shadow: 0 8px 24px rgba(249, 115, 22, .35);
+}
+.pay-alert.deep {
+  background: linear-gradient(135deg, #ea580c, #f97316);   /* 剩 4-6 天：橙红 */
+  box-shadow: 0 8px 24px rgba(234, 88, 12, .35);
+}
 .pay-alert.red {
-  background: linear-gradient(135deg, #ef4444, #f43f5e);
-  box-shadow: 0 8px 24px rgba(244, 63, 94, .35);
+  background: linear-gradient(135deg, #e11d48, #f43f5e);   /* 剩 1-3 天：红 */
+  box-shadow: 0 8px 24px rgba(225, 29, 72, .35);
+}
+.pay-alert.due {
+  background: linear-gradient(135deg, #be123c, #e11d48);   /* 今天是最晚还款日：深红 */
+  box-shadow: 0 8px 24px rgba(190, 18, 60, .4);
+}
+.pay-alert.overdue {
+  background: linear-gradient(135deg, #7f1d1d, #ea580c);   /* 逾期：深红 + 橙 */
+  box-shadow: 0 8px 24px rgba(127, 29, 29, .45);
 }
 .pay-alert .pa-icon {
   width: 38px; height: 38px; flex: none; border-radius: 12px;
@@ -626,12 +830,79 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 }
 .tl-fab:active { transform: scale(.92); }
 
+/* 仪表盘悬浮「+记账」按钮：圆形加号 + 小字 */
+.fab-rec { flex-direction: column; gap: 1px; }
+.fab-rec .fab-rec-label { font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: 1px; }
+
 @media (max-width: 768px) {
   /* 手机端：新增支付工具/账户卡片默认隐藏，用悬浮按钮 + 弹窗代替 */
   .tl-add-card { display: none; }
   .tl-fab { display: flex; }
   #page-tools, #page-accounts { padding-bottom: 86px; }
 }
+
+/* 手机端：管理页「存储信息」表格紧凑显示 */
+@media (max-width: 768px) {
+  #page-manage .tbl { font-size: 11.5px; min-width: 0; }
+  #page-manage .tbl th, #page-manage .tbl td { padding: 7px 9px; }
+}
+
+/* 手机端：款项名目列表稍微紧凑 */
+@media (max-width: 768px) {
+  #page-names .tbl { font-size: 12px; min-width: 0; }
+  #page-names .tbl th, #page-names .tbl td { padding: 4px 5px; }
+  #page-names .tbl th { font-size: 11px; }
+  #page-names .row-logo { width: 24px; height: 24px; border-radius: 7px; }
+  #page-names .row-logo svg { width: 15px; height: 15px; }
+  #page-names .op-btn { width: 24px; height: 24px; }
+  #page-names .op-btns { gap: 3px; }
+  #page-names .cell-flex { gap: 6px; }
+}
+
+/* 手机端：支付工具列表紧凑（隐藏卡号、状态列与账单日小字，去横向滚动） */
+@media (max-width: 768px) {
+  #page-tools .tbl { font-size: 12px; min-width: 0; }
+  #page-tools .tbl th, #page-tools .tbl td { padding: 4px 5px; }
+  #page-tools .tbl th { font-size: 11px; }
+  #page-tools .tbl th:nth-child(4), #page-tools .tbl td:nth-child(4),
+  #page-tools .tbl th:nth-child(6), #page-tools .tbl td:nth-child(6) { display: none; }
+  #page-tools .tbl td .cell-flex small { display: none; }
+  #page-tools .row-logo { width: 24px; height: 24px; border-radius: 7px; }
+  #page-tools .row-logo svg { width: 15px; height: 15px; }
+  #page-tools .op-btn { width: 24px; height: 24px; }
+  #page-tools .op-btns { gap: 3px; }
+  #page-tools .cell-flex { gap: 6px; }
+}
+
+/* ==================== 关于页 ==================== */
+.about-hero { text-align: center; padding: 30px 22px 22px; }
+.about-logo { display: flex; justify-content: center; }
+.about-name { font-size: 19px; margin-top: 12px; }
+.about-ver { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.about-intro { color: var(--ink2); font-size: 13px; line-height: 1.9; margin: 14px auto 0; max-width: 640px; text-align: left; }
+.about-badges { display: flex; justify-content: center; flex-wrap: nowrap; gap: 8px; margin-top: 16px; }
+.about-badges-2 { margin-top: 8px; }
+.about-badge {
+  font-size: 12px; font-weight: 600; color: var(--brand);
+  background: var(--brand-soft); border-radius: 16px; padding: 5px 14px;
+  white-space: nowrap;
+}
+.about-meta {
+  margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 14px;
+  display: grid; grid-template-columns: auto auto; gap: 2px 10px;
+  justify-content: center; text-align: left;
+}
+.about-meta-row { display: contents; }
+.about-meta-row span { color: var(--muted); font-size: 13px; line-height: 2; text-align: right; } /* 字段名右对齐 */
+.about-meta-row b { font-size: 13px; font-weight: 600; line-height: 2; text-align: left; }
+.about-meta-row a { color: var(--brand); text-decoration: none; }
+
+.about-privacy { max-width: 860px; margin: 0 auto; }
+.privacy-body { color: var(--ink2); font-size: 13px; line-height: 1.9; }
+.privacy-body .privacy-date { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+.privacy-body h4 { color: var(--ink); font-size: 14px; margin: 16px 0 6px; }
+.privacy-body p { margin-bottom: 8px; }
+.privacy-body a { color: var(--brand); }
 
 /* 安卓 APP 环境顶部安全区 */
 .app-env #topbar { padding-top: env(safe-area-inset-top); }

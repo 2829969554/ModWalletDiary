@@ -15,22 +15,22 @@
     el.innerHTML =
       '<div class="card">' +
         '<div class="card-title"><span class="bar"></span><span id="rf-title">记一笔</span></div>' +
-        '<div class="field"><label>日期时间</label><input type="datetime-local" id="rf-time"></div>' +
-        '<div class="field"><label>记账类型</label>' +
+        '<div class="field field-row"><label>记账时间</label><input type="datetime-local" id="rf-time"></div>' +
+        '<div class="field field-row"><label>记账类型</label>' +
           '<div class="radio-row">' +
             '<div class="radio-chip income" data-v="1"><span class="dot"></span>收入</div>' +
             '<div class="radio-chip expense on" data-v="2"><span class="dot"></span>支出</div>' +
           '</div>' +
         '</div>' +
-        '<div class="field"><label>金额（元）</label><input type="number" id="rf-amount" placeholder="0.00" inputmode="decimal" step="0.01" min="0"></div>' +
-        '<div class="field"><label>款项名目（可从列表选，也可输入新名目）</label><div class="combo"><input type="text" id="rf-name" placeholder="选择或输入款项名目">' +
+        '<div class="field field-row"><label>金额（元）</label><input type="number" id="rf-amount" placeholder="0.00" inputmode="decimal" step="0.01" min="0"></div>' +
+        '<div class="field"><label>款项名目（可从列表选，也可输入新名目）</label><div class="combo"><input type="text" id="rf-name" placeholder="选择或双击输入款项名目">' +
           '<button class="combo-arrow" tabindex="-1"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>' +
-        '<div class="field"><label>支付工具（可从列表选，也可输入新工具）</label><div class="combo"><input type="text" id="rf-tool" placeholder="选择或输入支付工具">' +
+        '<div class="field"><label>支付工具（可从列表选，也可输入新工具）</label><div class="combo"><input type="text" id="rf-tool" placeholder="选择或双击输入支付工具">' +
           '<button class="combo-arrow" tabindex="-1"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>' +
         '<div class="field"><label>交易账户（必选，从账户管理筛选）</label><select id="rf-acct">' +
           '<option value="">请选择交易账户</option>' +
           d.accounts.filter(function (a) { return !a.acchide; }).map(function (a) {
-            return '<option value="' + a.accid + '">' + global.UI.esc(a.accname) + '（' + global.UI.esc(a.acctype || '') + ' · ¥' + global.UI.fmtMoney(a.accmny) + '）</option>';
+            return '<option value="' + a.accid + '">' + global.UI.esc(a.accname) + '（' + global.UI.esc(acctTypeLabel(a)) + ' · ¥' + global.UI.fmtMoney(a.accmny) + '）</option>';
           }).join('') +
         '</select></div>' +
         '<div class="field"><label>交易路径</label>' +
@@ -39,10 +39,10 @@
             '<div class="radio-chip path" data-v="2"><span class="dot"></span>线下</div>' +
           '</div>' +
         '</div>' +
-        '<div class="field"><label>商户名称（可自定义）</label><div class="combo"><input type="text" id="rf-payname" list="" placeholder="超市 / 路边摊 / 淘宝 …或输入新商户">' +
+        '<div class="field"><label>商户名称（可自定义）</label><div class="combo"><input type="text" id="rf-payname" list="" placeholder="超市 / 路边摊 / 淘宝 …或双击输入新商户">' +
           '<button class="combo-arrow" tabindex="-1"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>' +
         '<div class="field"><label>备注（可选）</label><input type="text" id="rf-note" placeholder="备注"></div>' +
-        '<div style="display:flex;gap:10px;margin-top:18px">' +
+        '<div class="rf-actions">' +
           '<button id="rf-cancel" class="btn-ghost" style="flex:1;display:none">取消编辑</button>' +
           '<button id="rf-save" class="btn-primary" style="flex:2">保存账单</button>' +
         '</div>' +
@@ -189,6 +189,15 @@
   function findMid(d, name) {
     var m = d.mingmu.find(function (x) { return x.mname === name.trim() && !x.mhide; });
     return m ? m.mid : 0;
+  }
+  /* 账户类型显示：银行卡/借记卡/信用卡 后面带卡号后四位，如 借记卡6688、信用卡2588 */
+  function acctTypeLabel(a) {
+    var t = a.acctype || '';
+    if (t === '借记卡' || t === '信用卡' || t === '银行卡') {
+      var l4 = String(a.accuid || '').replace(/\D/g, '').slice(-4);
+      return t + (l4 ? l4 : '');
+    }
+    return t;
   }
   function findQid(d, name) {
     var q = d.gongju.find(function (x) { return x.qname === name.trim() && !x.qhide; });

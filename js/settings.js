@@ -36,6 +36,16 @@
 
     el.innerHTML =
       '<div class="card">' +
+        '<div class="card-title"><span class="bar"></span>显示模式</div>' +
+        '<div class="chip-row" id="st-theme">' +
+          '<button class="chip' + (s.theme === 'auto' ? ' on' : '') + '" data-tv="auto">自动</button>' +
+          '<button class="chip' + (s.theme === 'light' ? ' on' : '') + '" data-tv="light">浅色模式</button>' +
+          '<button class="chip' + (s.theme === 'dark' ? ' on' : '') + '" data-tv="dark">深色模式</button>' +
+        '</div>' +
+        '<p class="set-tip">自动：白天 7:00-18:00 浅色模式，夜晚 18:00-7:00 深色模式。</p>' +
+      '</div>' +
+
+      '<div class="card">' +
         '<div class="card-title"><span class="bar"></span>发薪日</div>' +
         '<div class="set-row">' +
           '<div class="set-field"><input type="number" id="st-payday" min="1" max="31" placeholder="每月几号发薪，如 10" value="' + (s.payday.day || '') + '"></div>' +
@@ -176,6 +186,17 @@
         } else return;
         tgt.show = !tgt.show;
         global.DB.saveSettings();
+        render();
+      });
+    });
+
+    /* 显示模式切换：立即生效并保存（含解锁前镜像） */
+    el.querySelectorAll('#st-theme .chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        s.theme = chip.dataset.tv;
+        global.DB.saveSettings();
+        try { global.localStorage.setItem('WalletDiaryTheme', s.theme); } catch (e) { /* ignore */ }
+        if (global.UI.applyTheme) global.UI.applyTheme(s.theme);
         render();
       });
     });

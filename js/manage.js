@@ -66,7 +66,7 @@
         exported: new Date().toISOString(),
         data: raw
       }, null, 2);
-      var name = 'WalletDiary_' + global.UI.today().replace(/-/g, '') + '.json';
+      var name = 'WalletDiary.json';
       download(name, payload);
     });
 
@@ -201,31 +201,89 @@
   }
 
   function download(name, text) {
-    // 浏览器：Blob 下载；H5+ APP：写入应用文档目录
-    if (window.plus) {
+    // H5+ APP：写出【应用私有目录】与【SD 卡 Documents/backups】两个位置，
+    // 文件名 = 文件名字 + 日期 + 正序序号（当日第 N 次导出，两位递增），
+    // 写完后调起操作系统分享面板把文件分享出去；浏览器环境走 Blob 下载
+    if (window.plus && window.plus.io) {
       try {
-        plus.io.requestFileSystem(plus.io.PUBLIC_DOCUMENTS, function (fs) {
-          fs.root.getFile(name, { create: true }, function (entry) {
-            entry.createWriter(function (writer) {
-              writer.onwrite = function () {
-                global.UI.toast('已导出到：' + entry.fullPath, 'ok', 5000);
-              };
-              writer.onerror = function () { global.UI.toast('导出失败', 'err'); };
-              writer.write(text);
-            }, function () { global.UI.toast('导出失败', 'err'); });
-          }, function () { global.UI.toast('导出失败', 'err'); });
-        }, function () { global.UI.toast('导出失败', 'err'); });
+        var dateStr = (global.UI.today() || '').replace(/-/g, '');
+        var base = name.replace(/\.[^.]+$/, '');                       // 文件名字（去扩展名）
+        var ext = (name.match(/\.([^.]+)$/) || [0, 'json'])[1];
+        var prefix = base + '_' + dateStr + '_';                        // WalletDiary_20261020_
+        var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        var sdEntry = null;
+
+        // 在目标目录里找当日已有导出，计算下一个正序序号（目录名：backups）
+        function nextName(dir, cb) {
+          var reader = dir.createReader();
+          var max = 0, pages = 0;
+          var re = new RegExp('^' + prefix + '(\\d{2})\\.' + ext + '$');
+          (function readPage() {
+            reader.readEntries(function (entries) {
+              if (!entries.length || ++pages > 20) return cb(pad2(max + 1));
+              entries.forEach(function (e2) {
+                var m2 = re.exec(e2.name);
+                if (m2) max = Math.max(max, parseInt(m2[1], 10));
+              });
+              readPage();
+            }, function () { cb(pad2(max + 1)); });
+          })();
+        }
+        function writeInto(fsId, sub, cb) {
+          plus.io.requestFileSystem(fsId, function (fs) {
+            fs.root.getDirectory(sub, { create: true }, function (dir) {
+              nextName(dir, function (nn) {
+                var fname = prefix + nn + '.' + ext;
+                dir.getFile(fname, { create: true }, function (entry) {
+                  entry.createWriter(function (writer) {
+                    writer.onwrite = function () { cb(null, entry); };
+                    writer.onerror = function () { cb(new Error('写入失败')); };
+                    writer.write(text);
+                  }, function () { cb(new Error('创建写入器失败')); });
+                }, function () { cb(new Error('创建文件失败')); });
+              });
+            }, function () { cb(new Error('创建 backups 目录失败')); });
+          }, function () { cb(new Error('打开文件系统失败')); });
+        }
+        function sysShare(entry) {
+          if (!window.plus.share || !plus.share.sendWithSystem) return;
+          plus.share.sendWithSystem({
+            type: 'file',
+            content: '钱包日记数据备份 ' + entry.name,
+            href: entry.toURL()
+          }, function () {
+            global.UI.toast('已调起系统分享，可将备份文件发出');
+          }, function () {
+            global.UI.toast('备份已导出（系统分享不可用）');
+          });
+        }
+
+        // 1) SD 卡：公共文档目录 backups/
+        writeInto(plus.io.PUBLIC_DOCUMENTS, 'backups', function (err, entry) {
+          if (err) global.UI.toast('SD 卡导出失败：' + err.message, 'err');
+          else {
+            sdEntry = entry;
+            global.UI.toast('已导出：Documents/backups/' + entry.name);
+            sysShare(entry);
+          }
+        });
+        // 2) 应用私有目录 _doc/backups/
+        writeInto(plus.io.PRIVATE_DOC, 'backups', function (err, entry) {
+          if (err) global.UI.toast('应用目录导出失败：' + err.message, 'err');
+        });
         return;
       } catch (e) { /* 回退浏览器方式 */ }
     }
+    // 浏览器：Blob 下载（带日期文件名）
+    var dateTag = (global.UI.today() || '').replace(/-/g, '');
     var blob = new Blob([text], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = name;
+    a.download = name.replace(/\.json$/, '_' + dateTag + '.json');
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
-    global.UI.toast('已开始下载 ' + name, 'ok');
+    global.UI.toast('已开始下载 ' + a.download, 'ok');
   }
 
   function sizeText() {

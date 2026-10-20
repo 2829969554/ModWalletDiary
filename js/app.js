@@ -12,12 +12,17 @@
     accounts: { title: '账户管理', render: function () { global.Pages.accounts.render(); } },
     stats: { title: '统计', render: function () { global.Pages.stats.render(); } },
     manage: { title: '管理', render: function () { global.Pages.manage.render(); } },
-    settings: { title: '设置', render: function () { global.Pages.settings.render(); } }
+    settings: { title: '设置', render: function () { global.Pages.settings.render(); } },
+    about: { title: '关于', render: function () { global.Pages.about.render(); } }
   };
   var current = 'dashboard';
 
   function init() {
     detectEnv();
+    // 解锁前先按镜像设置应用显示模式（auto/light/dark）
+    if (global.UI && global.UI.applyTheme) {
+      global.UI.applyTheme(global.localStorage.getItem('WalletDiaryTheme') || 'auto');
+    }
     bindSidebar();
     bindNav();
     bindAuth();

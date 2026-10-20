@@ -6,7 +6,7 @@
 <meta name="format-detection" content="telephone=no">
 <title>ModWalletDiary · 钱包日记</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='12' fill='%236366f1'/%3E%3Cpath d='M12 17a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z' fill='%23fff'/%3E%3Cpath d='M32 22h6v6h-6a3 3 0 0 1 0-6z' fill='%23a5b4fc'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=20261019k">
+<link rel="stylesheet" href="css/style.css?v=20261020z">
 </head>
 <body>
 
@@ -26,6 +26,7 @@
       </svg>
     </div>
     <h1 class="auth-title">ModWalletDiary</h1>
+    <p class="auth-appname">钱包日记</p>
     <p class="auth-sub">离线记账本 · AES 加密 · 本地存储</p>
 
     <div id="auth-setup" hidden>
@@ -96,6 +97,10 @@
         <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
         <span class="txt">设置</span>
       </a>
+      <a href="javascript:;" data-page="about" class="nav-item" title="关于">
+        <span class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><circle cx="12" cy="8" r="1"/></svg></span>
+        <span class="txt">关于</span>
+      </a>
     </nav>
     <div class="side-foot">
       <a href="javascript:;" id="lock-btn" class="nav-item" title="锁定">
@@ -124,6 +129,7 @@
       <section id="page-stats" class="page" hidden></section>
       <section id="page-manage" class="page" hidden></section>
       <section id="page-settings" class="page" hidden></section>
+      <section id="page-about" class="page" hidden></section>
     </div>
   </main>
 </div>
@@ -133,21 +139,22 @@
   <div id="modal" role="dialog"></div>
 </div>
 
-<script src="lib/crypto-js.min.js?v=20261019k"></script>
-<script src="lib/chart.umd.min.js?v=20261019k"></script>
-<script src="lib/solarlunar.min.js?v=20261019k"></script>
-<script src="js/brand-icons.js?v=20261019k"></script>
-<script src="js/icons.js?v=20261019k"></script>
-<script src="js/storage.js?v=20261019k"></script>
-<script src="js/ui.js?v=20261019k"></script>
-<script src="js/dashboard.js?v=20261019k"></script>
-<script src="js/record.js?v=20261019k"></script>
-<script src="js/names.js?v=20261019k"></script>
-<script src="js/tools.js?v=20261019k"></script>
-<script src="js/accounts.js?v=20261019k"></script>
-<script src="js/stats.js?v=20261019k"></script>
-<script src="js/manage.js?v=20261019k"></script>
-<script src="js/settings.js?v=20261019k"></script>
-<script src="js/app.js?v=20261019k"></script>
+<script src="lib/crypto-js.min.js?v=20261020z"></script>
+<script src="lib/chart.umd.min.js?v=20261020z"></script>
+<script src="lib/solarlunar.min.js?v=20261020z"></script>
+<script src="js/brand-icons.js?v=20261020z"></script>
+<script src="js/icons.js?v=20261020z"></script>
+<script src="js/storage.js?v=20261020z"></script>
+<script src="js/ui.js?v=20261020z"></script>
+<script src="js/dashboard.js?v=20261020z"></script>
+<script src="js/record.js?v=20261020z"></script>
+<script src="js/names.js?v=20261020z"></script>
+<script src="js/tools.js?v=20261020z"></script>
+<script src="js/accounts.js?v=20261020z"></script>
+<script src="js/stats.js?v=20261020z"></script>
+<script src="js/manage.js?v=20261020z"></script>
+<script src="js/settings.js?v=20261020z"></script>
+<script src="js/about.js?v=20261020z"></script>
+<script src="js/app.js?v=20261020z"></script>
 </body>
 </html>

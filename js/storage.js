@@ -17,6 +17,8 @@
 
   function defaultSettings() {
     return {
+      // 显示模式：auto 自动（7:00-18:00 浅色）/ light 浅色 / dark 深色
+      theme: 'auto',
       // 发薪日：每月几号（0=未设置）
       payday: { day: 0, show: true },
       // 我的生日 'MM-DD'
@@ -93,6 +95,7 @@
     if (!d.settings || typeof d.settings !== 'object') d.settings = defaultSettings();
     // 旧设置若是扁平字段则转成新结构（容错）
     var s = d.settings;
+    if (!s.theme) s.theme = 'auto';
     if (!s.payday) s.payday = { day: 0, show: true };
     if (!s.myBirthday) s.myBirthday = { date: '', show: true };
     if (!s.cny) s.cny = { date: '', show: true };
@@ -127,6 +130,10 @@
     global.localStorage.setItem(KEY, cipher);
     DB = d;
     PASSWORD = password;
+    if (global.UI && global.UI.applyTheme) {
+      global.UI.applyTheme(DB.settings.theme);
+      try { global.localStorage.setItem('WalletDiaryTheme', DB.settings.theme); } catch (e) { /* ignore */ }
+    }
   }
 
   /* ---------- 用密码解锁已有数据 ---------- */
@@ -137,6 +144,11 @@
     migrate(d);
     DB = d;
     PASSWORD = password;
+    // 解锁后立即应用显示模式，并镜像一份供解锁前页面使用
+    if (global.UI && global.UI.applyTheme) {
+      global.UI.applyTheme(DB.settings.theme);
+      try { global.localStorage.setItem('WalletDiaryTheme', DB.settings.theme); } catch (e) { /* ignore */ }
+    }
   }
 
   /* ---------- 保存（加密回写） ---------- */
