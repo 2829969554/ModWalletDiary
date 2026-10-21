@@ -19,7 +19,7 @@
     "id" : "H55774A36",
     "version" : {
         "name" : "1.0.0",
-        "code" : 2
+        "code" : 4
     },
     "launch_path" : "index.html",
     "developer" : {
@@ -132,10 +132,13 @@
                 "idfa" : false
             },
             "ios" : {
-                "dSYMs" : true
+                "dSYMs" : false
             },
             "splashscreen" : {
                 "useOriginalMsgbox" : true
+            },
+            "plugins" : {
+                "share" : {}
             }
         },
         "splashscreen" : {
@@ -143,5 +146,9 @@
             "waiting" : true
         }
     },
-    "screenOrientation" : [ "portrait-primary" ]
+    "screenOrientation" : [ "portrait-primary" ],
+    "permissions" : {
+        "Share" : {},
+        "UIWebview" : {}
+    }
 }

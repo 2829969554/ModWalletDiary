@@ -152,17 +152,17 @@
   }
 
   /* ==================== 信用卡还款提醒横幅 ====================
-   * 出账日（账单日）之后开始提醒；最晚还款日 = 账单日 + 15 天
+   * 账单日次日开始提醒（当天银行尚未出账，不提醒）；最晚还款日 = 账单日 + 15 天
    * 颜色随剩余还款天数逐渐加深：橙黄 → 橙 → 橙红 → 红 → 深红；
    * 超出最晚还款日（逾期）为深红 + 橙色结合
    */
   var DUE_OFFSET = 15; // 最晚还款日 = 账单日后 15 天
 
-  // 最近一个已到的账单日（<= today），即当前账单周期
+  // 当前账单周期：最近一个已出账的账单日（严格早于今天——账单日当天银行尚未出账，次日才开始提醒）
   function currentBillDate(day, today0) {
     var y = today0.getFullYear(), m = today0.getMonth();
     var b = billDateIn(y, m, day);
-    if (b > today0) b = billDateIn(y, m - 1, day);
+    if (b >= today0) b = billDateIn(y, m - 1, day);
     return b;
   }
 

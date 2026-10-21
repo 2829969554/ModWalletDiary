@@ -30,14 +30,44 @@
 
     var active = d.accounts.filter(function (a) { return !a.acchide; });
     var hidden = d.accounts.filter(function (a) { return a.acchide; });
-    // 总资产 = 非信用类账户可用资金之和；负债 = 信用类（额度-可用）之和
-    var totalAssets = d.accounts.reduce(function (s, a) {
+
+    /* 信用卡同名多卡共享额度：
+     * - 同一账户名称（同一家银行）的多张信用卡共用一份信用额度（取其中最大额度）
+     * - 每张卡的负债单独计算（该卡额度 - 该卡可用资金）
+     * - 剩余可用额度 = 共享额度 - 组内所有卡负债之和（所有卡共享）
+     */
+    function cardDebt(a) {
+      var lim = Number(a.acclimit) || 0;
+      return Math.max(0, lim - (Number(a.accmny) || 0));
+    }
+    var cardGroups = {}; // 信用卡组：名称 -> { limit, cards: [] }（只统计可见账户）
+    active.forEach(function (a) {
+      if (a.acctype !== '信用卡') return;
+      var g = cardGroups[a.accname] || (cardGroups[a.accname] = { limit: 0, cards: [] });
+      g.cards.push(a);
+      g.limit = Math.max(g.limit, Number(a.acclimit) || 0);
+    });
+    function groupAvailable(g) {
+      var debt = g.cards.reduce(function (s, c) { return s + cardDebt(c); }, 0);
+      return Math.max(0, g.limit - debt);
+    }
+    // 信用账户展示用：信用卡显示组共享可用额度 + 本卡负债；其他信用类按原逻辑
+    function creditView(a) {
+      if (a.acctype === '信用卡' && !a.acchide) {
+        var g = cardGroups[a.accname];
+        if (g) return { mny: groupAvailable(g), debt: cardDebt(a), limit: g.limit, shared: g.cards.length > 1 };
+      }
+      return { mny: Number(a.accmny) || 0, debt: debtOf(a), limit: Number(a.acclimit) || 0, shared: false };
+    }
+
+    // 统计只算可见账户；总资产 = 非信用类可用资金之和；负债 = 各信用账户负债之和
+    var totalAssets = active.reduce(function (s, a) {
       return global.DB.isCreditAcct(a.acctype) ? s : s + (Number(a.accmny) || 0);
     }, 0);
-    var totalDebt = d.accounts.reduce(function (s, a) { return s + debtOf(a); }, 0);
-    // 总授信 = 信用类账户额度之和；名称相同但卡号不同的计为同一条授信，只取一次（去重取最大额度）
+    var totalDebt = active.reduce(function (s, a) { return s + creditView(a).debt; }, 0);
+    // 总授信 = 信用类额度之和；名称相同（同名多卡共享额度）只计一次，取最大额度
     var creditByName = {};
-    d.accounts.forEach(function (a) {
+    active.forEach(function (a) {
       if (global.DB.isCreditAcct(a.acctype) && (Number(a.acclimit) || 0) > 0) {
         var lim = Number(a.acclimit) || 0;
         if (!creditByName[a.accname] || lim > creditByName[a.accname]) creditByName[a.accname] = lim;
@@ -259,12 +289,13 @@
       if (!list.length) html += '<tr><td colspan="8" class="empty-tip">暂无</td></tr>';
       list.forEach(function (a) {
         var cnt = d.walletdiary.filter(function (b) { return b.wacct === a.accid; }).length;
-        var mny = Number(a.accmny) || 0;
-        var dbt = debtOf(a);
         var isCreditAcc = global.DB.isCreditAcct(a.acctype);
+        var cv = isCreditAcc ? creditView(a) : { mny: Number(a.accmny) || 0, debt: 0, limit: 0, shared: false };
+        var mny = cv.mny;
+        var dbt = cv.debt;
         var mnyHtml = '<span style="font-weight:700;color:' + (dbt > 0 ? 'var(--red)' : (mny >= 0 ? 'var(--green)' : 'var(--red)')) + '">¥ ' + global.UI.fmtMoney(mny) + '</span>';
         if (isCreditAcc) {
-          mnyHtml += '<small style="display:block;color:var(--muted);font-size:11px;margin-top:2px">额度 ¥' + global.UI.fmtMoney(a.acclimit) +
+          mnyHtml += '<small style="display:block;color:var(--muted);font-size:11px;margin-top:2px">额度 ¥' + global.UI.fmtMoney(cv.limit) +
             (dbt > 0 ? ' · 负债 ¥' + global.UI.fmtMoney(dbt) : '') +
             (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</small>';
         }
@@ -290,7 +321,7 @@
           // 信用类账户：行尾追加明细单元格（手机端显示一行：左额度 / 右负债+账单日）
           (isCreditAcc
             ? '<td class="acct-credit-cell">' +
-                '<span class="cs-left">信用额度 ¥' + global.UI.fmtMoney(a.acclimit) + '</span>' +
+                '<span class="cs-left">信用额度 ¥' + global.UI.fmtMoney(cv.limit) + (cv.shared ? '（共享）' : '') + '</span>' +
                 '<span class="cs-right">负债 ¥' + global.UI.fmtMoney(dbt) + (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</span>' +
               '</td>'
             : '') +

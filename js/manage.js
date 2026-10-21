@@ -248,9 +248,8 @@
         function sysShare(entry) {
           if (!window.plus.share || !plus.share.sendWithSystem) return;
           plus.share.sendWithSystem({
-            type: 'file',
-            content: '钱包日记数据备份 ' + entry.name,
-            href: entry.toURL()
+            type: 'text',
+            content: '导出文件地址: ' + entry.fullPath + "\n请你打开文件管理器到此路径,手动将此文件转移至安全位置并妥善保存。（例如：发送到微信或者网盘）"
           }, function () {
             global.UI.toast('已调起系统分享，可将备份文件发出');
           }, function () {
