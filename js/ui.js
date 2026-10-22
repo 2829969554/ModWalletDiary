@@ -39,6 +39,7 @@
     var overlay = document.getElementById('modal-overlay');
     var modal = document.getElementById('modal');
     modal.innerHTML = '';
+    modal.className = ''; // 重置上一次弹窗的修饰类（如 modal-list）
 
     var h = document.createElement('h3');
     h.textContent = opts.title || '';
@@ -81,7 +82,9 @@
 
   UI.closeModal = function () {
     document.getElementById('modal-overlay').hidden = true;
-    document.getElementById('modal').innerHTML = '';
+    var modal = document.getElementById('modal');
+    modal.innerHTML = '';
+    modal.className = '';
   };
 
   UI.confirm = function (title, msg, onOk, okText) {

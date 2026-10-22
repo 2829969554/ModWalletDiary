@@ -56,8 +56,8 @@
         var cnt = d.walletdiary.filter(function (b) { return b.wname === m.mid; }).length;
         html += '<tr' + (isHidden ? ' class="hidden-row"' : '') + '>' +
           '<td class="num c-muted">' + m.mid + '</td>' +
-          '<td><span class="cell-flex"><span class="row-logo" data-nm="' + global.UI.esc(m.mname) + '"></span>' + global.UI.esc(m.mname) + '</span></td>' +
-          '<td class="num">' + cnt + ' 笔</td>' +
+          '<td><span class="cell-flex nm-link" data-view="' + m.mid + '" title="查看该名目的记账记录"><span class="row-logo" data-nm="' + global.UI.esc(m.mname) + '"></span>' + global.UI.esc(m.mname) + '</span></td>' +
+          '<td class="num nm-link" data-view="' + m.mid + '" title="查看该名目的记账记录">' + cnt + ' 笔</td>' +
           '<td>' + (isHidden ? '<span class="c-muted">已隐藏</span>' : '<span style="color:var(--green)">显示中</span>') + '</td>' +
           '<td><div class="op-btns">' +
             '<button class="op-btn" title="重命名" data-act="rename" data-id="' + m.mid + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>' +
@@ -70,12 +70,68 @@
       return html;
     }
 
+    /* 点击名目：弹窗显示该名目全部记账记录（按记账时间从近到远） */
+    function openRecords(m) {
+      var list = d.walletdiary.filter(function (b) { return b.wname === m.mid; })
+        .sort(function (a, b) { return (b.wtime || '').localeCompare(a.wtime || ''); });
+      var sumOut = 0, sumIn = 0;
+      list.forEach(function (b) {
+        if (b.wtype === 1) sumIn += Number(b.wamount) || 0;
+        else sumOut += Number(b.wamount) || 0;
+      });
+
+      var body = document.createElement('div');
+      var html =
+        '<div class="nm-sum">' +
+          '<span>共 <b>' + list.length + '</b> 笔</span>' +
+          '<span>支出 <b class="c-red">¥' + global.UI.fmtMoney(sumOut) + '</b></span>' +
+          '<span>收入 <b class="c-green">¥' + global.UI.fmtMoney(sumIn) + '</b></span>' +
+        '</div>';
+      if (!list.length) {
+        html += '<div class="empty-tip">该名目暂无记账记录</div>';
+      } else {
+        html += '<div class="nm-rec-list">' + list.map(function (b) {
+          var isIn = b.wtype === 1;
+          var sub = [];
+          sub.push(global.DB.gongjuName(b.wtool));
+          if (b.wpayname) sub.push(b.wpayname);
+          if (b.wnote) sub.push(b.wnote);
+          return '<div class="nm-rec">' +
+            '<div class="nm-rec-l"><b>' + global.UI.esc(b.wtime || '') + '</b>' +
+              '<span class="nm-rec-t ' + (isIn ? 'in' : 'out') + '">' + (isIn ? '收入' : '支出') + '</span></div>' +
+            '<div class="nm-rec-r ' + (isIn ? 'in' : 'out') + '">' + (isIn ? '+' : '-') + global.UI.fmtMoney(b.wamount) + '</div>' +
+            '<div class="nm-rec-sub">' + global.UI.esc(sub.join(' · ')) + '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+      }
+      html += '<button class="btn-ghost nm-close">关闭</button>';
+      body.innerHTML = html;
+
+      global.UI.modal({
+        title: '「' + m.mname + '」的记账记录',
+        body: body,
+        buttons: false,
+        maskClose: true
+      });
+      // 记录弹窗：整窗固定，仅中间列表滚动（数据再多也可一直下滑）
+      document.getElementById('modal').classList.add('modal-list');
+      body.querySelector('.nm-close').addEventListener('click', function () { global.UI.closeModal(); });
+    }
+
     var t1 = el.querySelector('#nm-table');
     t1.innerHTML = tblHtml(active, false);
     var t2 = el.querySelector('#nm-table-hidden');
     if (t2) t2.innerHTML = tblHtml(hidden, true);
 
     el.querySelectorAll('.row-logo').forEach(function (l) { global.Icons.fillLogo(l, l.dataset.nm); });
+
+    /* 点击名目名称 / 笔数 → 查看该名目的记账记录 */
+    el.querySelectorAll('.nm-link').forEach(function (n) {
+      n.addEventListener('click', function () {
+        var m = d.mingmu.find(function (x) { return x.mid === +n.dataset.view; });
+        if (m) openRecords(m);
+      });
+    });
 
     el.querySelectorAll('button[data-act]').forEach(function (btn) {
       var id = +btn.dataset.id;

@@ -41,7 +41,7 @@
         '<div class="about-meta">' +
           '<div class="about-meta-row"><span>开发者</span><b>@ModGoSir</b></div>' +
           '<div class="about-meta-row"><span>联系邮箱</span><b><a href="mailto:2829969554@qq.com">2829969554@qq.com</a></b></div>' +
-          '<div class="about-meta-row"><span>项目地址</span><b><a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">gitee.com/wxgshuju/ModWalletDiary</a></b></div>' +
+          '<div class="about-meta-row"><span>项目地址</span><b><a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">https://gitee.com/wxgshuju/ModWalletDiary</a></b></div>' +
         '</div>' +
       '</div>' +
 
@@ -70,7 +70,7 @@
           '<h4>六、未成年人保护</h4>' +
           '<p>本应用不收集任何个人信息，适合所有年龄段用户使用。</p>' +
           '<h4>七、开源与免责</h4>' +
-          '<p>本应用为开源项目，源代码托管于 <a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">gitee.com/wxgshuju/ModWalletDiary</a>，欢迎查阅与反馈。' +
+          '<p>本应用为开源项目，源代码托管于 <a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">https://gitee.com/wxgshuju/ModWalletDiary</a>，欢迎查阅与反馈。' +
             '本应用按“现状”提供，不对因误操作、设备故障或密码遗失导致的数据丢失承担责任。建议你定期在「管理」页导出备份。</p>' +
           '<h4>八、联系方式</h4>' +
           '<p>如对本隐私策略有任何疑问，请联系：<a href="mailto:2829969554@qq.com">2829969554@qq.com</a>（开发者 @ModGoSir）。</p>' +
@@ -97,7 +97,7 @@
             '本应用不收集、不上传、不分享任何个人数据，不含广告、统计埋点与第三方追踪 SDK。' +
             '详细处理方式请参阅上方的《隐私政策》。</p>' +
           '<h4>五、开源许可</h4>' +
-          '<p>本应用为开源项目，源代码托管于 <a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">gitee.com/wxgshuju/ModWalletDiary</a>。' +
+          '<p>本应用为开源项目，源代码托管于 <a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">https://gitee.com/wxgshuju/ModWalletDiary</a>。' +
             '你可以在遵守开源许可的前提下查阅、学习与二次开发；二次分发时不得冒充官方版本，不得移除或篡改开发者信息与隐私声明。</p>' +
           '<h4>六、免费与无广告</h4>' +
           '<p>本应用承诺<b>永久免费、无广告、无内购、无需联网</b>。开发者会尽力维护并持续改进，但不对功能更新频率与长期可用性作出承诺。</p>' +

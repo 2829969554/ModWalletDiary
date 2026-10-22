@@ -895,7 +895,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 .about-meta-row { display: contents; }
 .about-meta-row span { color: var(--muted); font-size: 13px; line-height: 2; text-align: right; } /* 字段名右对齐 */
 .about-meta-row b { font-size: 13px; font-weight: 600; line-height: 2; text-align: left; }
-.about-meta-row a { color: var(--brand); text-decoration: none; }
+.about-meta-row a { color: var(--brand); text-decoration: none; word-break: break-all; }
 
 .about-privacy { max-width: 860px; margin: 0 auto; }
 .privacy-body { color: var(--ink2); font-size: 13px; line-height: 1.9; }
@@ -903,6 +903,53 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 .privacy-body h4 { color: var(--ink); font-size: 14px; margin: 16px 0 6px; }
 .privacy-body p { margin-bottom: 8px; }
 .privacy-body a { color: var(--brand); }
+
+/* ==================== 名目记账记录弹窗 ==================== */
+/* 列表中可点击的名目名称 / 笔数 */
+.nm-link { cursor: pointer; transition: color .15s; }
+.nm-link:hover { color: var(--brand); }
+.nm-sum {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  font-size: 12.5px; color: var(--ink2);
+  background: var(--brand-soft); border-radius: 10px;
+  padding: 8px 10px; margin-bottom: 10px;
+  flex: none;
+}
+.nm-sum b { color: var(--ink); font-size: 13.5px; }
+.nm-sum b.c-red { color: var(--red); }
+.nm-sum b.c-green { color: var(--green); }
+/* 记录列表：独立滚动区，数据再多也可一直下滑；汇总条与关闭按钮固定 */
+.nm-rec-list {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: 58vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+  padding-right: 4px;
+}
+.nm-rec-list::-webkit-scrollbar { width: 6px; }
+.nm-rec-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.nm-rec-list::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+/* 记录弹窗：整窗不滚动，只有列表滚动 */
+#modal.modal-list { display: flex; flex-direction: column; overflow: hidden; }
+#modal.modal-list .modal-body { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.nm-rec {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px;
+  padding: 9px 4px; border-bottom: 1px solid var(--line);
+}
+.nm-rec:last-child { border-bottom: none; }
+.nm-rec-l { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.nm-rec-l b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.nm-rec-t { font-size: 10px; padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+.nm-rec-t.in { background: rgba(16, 185, 129, .14); color: var(--green); }
+.nm-rec-t.out { background: rgba(244, 63, 94, .14); color: var(--red); }
+.nm-rec-r { flex: none; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.nm-rec-r.in { color: var(--green); }
+.nm-rec-r.out { color: var(--red); }
+.nm-rec-sub { flex: 1 0 100%; font-size: 11.5px; color: var(--muted); }
+.nm-close { width: 100%; margin-top: 12px; height: 40px; }
 
 /* 安卓 APP 环境顶部安全区 */
 .app-env #topbar { padding-top: env(safe-area-inset-top); }

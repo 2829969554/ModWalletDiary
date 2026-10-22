@@ -447,7 +447,8 @@
   }
 
   /* ---------- 转账：任意两个账户之间划转可用资金（转入信用卡=还款，负债随之减少）
-   * 信用类账户（信用卡/花呗/分付/月付/白条/金条）只能作为转入账户，不能转出
+   * 信用类账户（信用卡/花呗/分付/月付/白条/金条）默认只能作为转入账户；
+   * 但信用卡存在溢缴款（可用资金 > 信用额度，即存款）时，可转出「存款」部分
    */
   function transfer(fromAccid, toAccid, amount) {
     amount = Math.round(Number(amount) * 100) / 100;
@@ -457,8 +458,19 @@
     var from = DB.accounts.find(function (x) { return x.accid === fromAccid; });
     var to = DB.accounts.find(function (x) { return x.accid === toAccid; });
     if (!from || !to) throw new Error('账户不存在');
-    if (isCreditAcct(from.acctype)) throw new Error('信用类账户只能作为转入账户（还款），不能转出');
-    from.accmny = Math.round(((Number(from.accmny) || 0) - amount) * 100) / 100;
+    var avail = Number(from.accmny) || 0;
+    if (isCreditAcct(from.acctype)) {
+      var lim = Number(from.acclimit) || 0;
+      var deposit = lim > 0 ? avail - lim : 0; // 溢缴款（存款）金额
+      if (from.acctype !== '信用卡' || deposit <= 0) {
+        throw new Error('信用类账户只能作为转入账户（还款），不能转出');
+      }
+      if (amount > deposit) throw new Error('转出金额不能超过存款金额 ¥' + deposit.toFixed(2));
+      from.accmny = Math.round((avail - amount) * 100) / 100;
+    } else {
+      if (amount > avail) throw new Error('转出金额不能超过可用资金 ¥' + avail.toFixed(2));
+      from.accmny = Math.round((avail - amount) * 100) / 100;
+    }
     to.accmny = Math.round(((Number(to.accmny) || 0) + amount) * 100) / 100;
     save();
     return { from: from.accname, to: to.accname, amount: amount };

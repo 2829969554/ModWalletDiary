@@ -9,11 +9,16 @@
 
   var ACCT_TYPES = ['余额', '零钱', '零钱通', '余额宝', '数字人民币', '现金', '借记卡', '信用卡', '花呗', '分付', '月付', '白条', '金条'];
 
-    function debtOf(a) {
-      var limit = Number(a.acclimit) || 0;
-      if (!global.DB.isCreditAcct(a.acctype) || limit <= 0) return 0;
-      return Math.max(0, limit - (Number(a.accmny) || 0));
+  /* 账户类型显示：银行卡/借记卡/信用卡/数字人民币 后面带账号后四位
+   * 如 借记卡6688、信用卡2588、数字人民币9999 */
+  function acctTypeLabel(a) {
+    var t = a.acctype || '';
+    if (t === '借记卡' || t === '信用卡' || t === '银行卡' || t === '数字人民币') {
+      var l4 = String(a.accuid || '').replace(/\D/g, '').slice(-4);
+      return t + (l4 ? l4 : '');
     }
+    return t;
+  }
 
     // 名称允许重复；「名称 + 卡号」组合不能重复（excludeAccid 用于编辑时排除自身）
     function dupCombo(name, uid, excludeAccid) {
@@ -33,12 +38,13 @@
 
     /* 信用卡同名多卡共享额度：
      * - 同一账户名称（同一家银行）的多张信用卡共用一份信用额度（取其中最大额度）
-     * - 每张卡的负债单独计算（该卡额度 - 该卡可用资金）
-     * - 剩余可用额度 = 共享额度 - 组内所有卡负债之和（所有卡共享）
+     * - 每张卡单独计算：净额 = 信用额度 - 可用资金
+     *     净额 > 0 → 欠款（显示「负债 ¥X」）；净额 < 0 → 溢缴款（显示「存款 ¥|X|」）
+     * - 组可用额度 = 共享额度 - 组内所有卡净额之和（所有卡共享）
      */
-    function cardDebt(a) {
+    function cardNet(a) {
       var lim = Number(a.acclimit) || 0;
-      return Math.max(0, lim - (Number(a.accmny) || 0));
+      return lim - (Number(a.accmny) || 0); // 带符号：正=负债，负=存款(溢缴)
     }
     var cardGroups = {}; // 信用卡组：名称 -> { limit, cards: [] }（只统计可见账户）
     active.forEach(function (a) {
@@ -48,23 +54,42 @@
       g.limit = Math.max(g.limit, Number(a.acclimit) || 0);
     });
     function groupAvailable(g) {
-      var debt = g.cards.reduce(function (s, c) { return s + cardDebt(c); }, 0);
-      return Math.max(0, g.limit - debt);
+      var sum = g.cards.reduce(function (s, c) { return s + cardNet(c); }, 0);
+      var v = g.limit - sum; // 信用额度 - 负债（负债可为负 = 溢缴款）
+      return v >= 0 ? v : 0;
     }
-    // 信用账户展示用：信用卡显示组共享可用额度 + 本卡负债；其他信用类按原逻辑
+    // 信用账户展示用：信用卡显示组共享可用额度 + 本卡净额；其他信用类同规则
     function creditView(a) {
       if (a.acctype === '信用卡' && !a.acchide) {
         var g = cardGroups[a.accname];
-        if (g) return { mny: groupAvailable(g), debt: cardDebt(a), limit: g.limit, shared: g.cards.length > 1 };
+        if (g) {
+          var net = cardNet(a);
+          return { mny: groupAvailable(g), net: net, limit: g.limit, shared: g.cards.length > 1 };
+        }
       }
-      return { mny: Number(a.accmny) || 0, debt: debtOf(a), limit: Number(a.acclimit) || 0, shared: false };
+      return { mny: Number(a.accmny) || 0, net: cardNet(a), limit: Number(a.acclimit) || 0, shared: false };
+    }
+    // 净额文案：正数「负债 ¥X」，负数「存款 ¥|X|」，0 不显示
+    function netText(net) {
+      if (net > 0) return '负债 ¥' + global.UI.fmtMoney(net);
+      if (net < 0) return '存款 ¥' + global.UI.fmtMoney(-net);
+      return '';
+    }
+    // 信用账户的「存款」（溢缴款）金额：可用资金超出信用额度的部分，属于真实持有的资金
+    function creditDeposit(a) {
+      var lim = Number(a.acclimit) || 0;
+      if (lim <= 0) return 0;
+      return Math.max(0, (Number(a.accmny) || 0) - lim);
     }
 
-    // 统计只算可见账户；总资产 = 非信用类可用资金之和；负债 = 各信用账户负债之和
+    // 统计只算可见账户；
+    // 总资产 = 非信用类可用资金之和 + 信用账户的「存款」（溢缴款）部分
+    // 负债 = 各信用账户欠款之和（仅计欠款，溢缴款不算负债）
     var totalAssets = active.reduce(function (s, a) {
-      return global.DB.isCreditAcct(a.acctype) ? s : s + (Number(a.accmny) || 0);
+      if (!global.DB.isCreditAcct(a.acctype)) return s + (Number(a.accmny) || 0);
+      return s + creditDeposit(a);
     }, 0);
-    var totalDebt = active.reduce(function (s, a) { return s + creditView(a).debt; }, 0);
+    var totalDebt = active.reduce(function (s, a) { return s + Math.max(0, creditView(a).net); }, 0);
     // 总授信 = 信用类额度之和；名称相同（同名多卡共享额度）只计一次，取最大额度
     var creditByName = {};
     active.forEach(function (a) {
@@ -211,23 +236,45 @@
      */
     function openTransferModal() {
       var list = d.accounts.filter(function (a) { return !a.acchide; });
-      var outList = list.filter(function (a) { return !global.DB.isCreditAcct(a.acctype); });
+      /* 可转出的金额上限：
+       * - 普通账户：可用资金
+       * - 信用类账户：仅信用卡存在溢缴款（存款 = 可用资金 - 信用额度）时可转出，且只能转出存款部分
+       */
+      function depositOf(a) { return creditDeposit(a); }
+      function maxOutOf(a) {
+        if (!a) return 0;
+        if (!global.DB.isCreditAcct(a.acctype)) return Number(a.accmny) || 0;
+        return depositOf(a);
+      }
+      var outList = list.filter(function (a) {
+        if (!global.DB.isCreditAcct(a.acctype)) return true;
+        return a.acctype === '信用卡' && depositOf(a) > 0; // 信用卡有存款（溢缴款）时可转出
+      });
       if (list.length < 2 || !outList.length) { global.UI.toast('至少需要一个可转出的账户和一个转入账户', 'err'); return; }
-      function optsOf(arr) {
+      function optsOf(arr, forOut) {
         return arr.map(function (a) {
-          var repay = global.DB.isCreditAcct(a.acctype) ? ' · 转入即还款' : '';
-          return '<option value="' + a.accid + '">' + global.UI.esc(a.accname) + '（' + global.UI.esc(a.acctype || '') + ' · 可用 ¥' + global.UI.fmtMoney(a.accmny) + repay + '）</option>';
+          var extra = '';
+          if (global.DB.isCreditAcct(a.acctype)) {
+            if (forOut) {
+              var dep = depositOf(a);
+              extra = dep > 0 ? ' · 可转出存款 ¥' + global.UI.fmtMoney(dep) : '';
+            } else {
+              extra = ' · 转入即还款';
+            }
+          }
+          return '<option value="' + a.accid + '">' + global.UI.esc(a.accname) + '（' + global.UI.esc(acctTypeLabel(a)) + ' · 可用 ¥' + global.UI.fmtMoney(a.accmny) + extra + '）</option>';
         }).join('');
       }
-      var outOpts = optsOf(outList);
-      var allOpts = optsOf(list);
+      var outOpts = optsOf(outList, true);
+      var allOpts = optsOf(list, false);
       // 账户明细
       var detail = '<div class="tr-detail"><div class="tr-detail-title">账户明细</div>' +
         list.map(function (a) {
-          var dbt = debtOf(a);
-          return '<div class="tr-detail-row"><span>' + global.UI.esc(a.accname) + '（' + global.UI.esc(a.acctype || '') + '）</span>' +
+          var cvv = global.DB.isCreditAcct(a.acctype) ? creditView(a) : { mny: Number(a.accmny) || 0, net: 0 };
+          var nt = netText(cvv.net);
+          return '<div class="tr-detail-row"><span>' + global.UI.esc(a.accname) + '（' + global.UI.esc(acctTypeLabel(a)) + '）</span>' +
             '<span>可用 ¥' + global.UI.fmtMoney(a.accmny) +
-            (dbt > 0 ? ' · 负债 ¥' + global.UI.fmtMoney(dbt) : '') +
+            (nt ? ' · ' + nt : '') +
             (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</span></div>';
         }).join('') + '</div>';
       var body = document.createElement('div');
@@ -248,11 +295,26 @@
         var f = findAcc(+fromSel.value), t = findAcc(+toSel.value);
         var amt = parseFloat(amtInput.value) || 0;
         if (!f || !t) { preview.textContent = ''; return; }
-        if (f.accid === t.accid) { preview.textContent = '转出与转入不能是同一个账户'; return; }
-        var txt = '转出后「' + f.accname + '」可用 ¥' + global.UI.fmtMoney((Number(f.accmny) || 0) - amt);
+        if (f.accid === t.accid) { preview.textContent = '转出与转入不能是同一个账户'; preview.style.color = ''; return; }
+        var isCreditSrc = global.DB.isCreditAcct(f.acctype);
+        var cap = maxOutOf(f);                       // 信用类转出上限=存款额，普通账户=可用资金
+        var avail = Number(f.accmny) || 0;
+        if (amt > 0 && amt > cap) {
+          preview.textContent = isCreditSrc
+            ? '转出金额超出存款金额（可转出存款 ¥' + global.UI.fmtMoney(cap) + '）'
+            : '转出金额超出可用资金（可用 ¥' + global.UI.fmtMoney(cap) + '）';
+          preview.style.color = 'var(--red)';
+          return;
+        }
+        preview.style.color = '';
+        var txt = '转出后「' + f.accname + '」可用 ¥' + global.UI.fmtMoney(avail - amt);
         txt += ' → 转入后「' + t.accname + '」可用 ¥' + global.UI.fmtMoney((Number(t.accmny) || 0) + amt);
         if (global.DB.isCreditAcct(t.acctype) && (Number(t.acclimit) || 0) > 0) {
-          txt += '，负债 ¥' + global.UI.fmtMoney(Math.max(0, t.acclimit - (Number(t.accmny) || 0) - amt)) + '（还款）';
+          // 还款后的净额 = 信用额度 - (可用资金 + 还款额)
+          var afterNet = (Number(t.acclimit) || 0) - ((Number(t.accmny) || 0) + amt);
+          if (afterNet > 0) txt += '，负债 ¥' + global.UI.fmtMoney(afterNet) + '（还款）';
+          else if (afterNet < 0) txt += '，存款 ¥' + global.UI.fmtMoney(-afterNet) + '（还款）';
+          else txt += '，负债 ¥0.00（还款）';
         }
         preview.textContent = txt;
       }
@@ -269,8 +331,18 @@
           var from = +fromSel.value;
           var to = +toSel.value;
           var amt = parseFloat(amtInput.value);
-          if (!(amt > 0)) { global.UI.toast('请输入正确的转账金额', 'err'); return false; }
+          if (!(amt > 0)) { global.UI.toast('转账金额必须大于 0', 'err'); return false; }
           if (from === to) { global.UI.toast('转出与转入不能是同一个账户', 'err'); return false; }
+          var fromAcc = findAcc(from);
+          var isCreditSrc = fromAcc ? global.DB.isCreditAcct(fromAcc.acctype) : false;
+          var cap = maxOutOf(fromAcc); // 信用类=存款额上限，普通账户=可用资金上限
+          if (amt > cap) {
+            var msg = isCreditSrc
+              ? '转出金额不能超过「' + fromAcc.accname + '」的存款金额 ¥' + global.UI.fmtMoney(cap)
+              : '转出金额不能超过「' + (fromAcc ? fromAcc.accname : '') + '」的可用资金 ¥' + global.UI.fmtMoney(cap);
+            global.UI.toast(msg, 'err');
+            return false;
+          }
           try {
             var r = global.DB.transfer(from, to, amt);
             global.UI.toast('已转账 ¥' + global.UI.fmtMoney(r.amount) + '：' + r.from + ' → ' + r.to, 'ok');
@@ -290,13 +362,14 @@
       list.forEach(function (a) {
         var cnt = d.walletdiary.filter(function (b) { return b.wacct === a.accid; }).length;
         var isCreditAcc = global.DB.isCreditAcct(a.acctype);
-        var cv = isCreditAcc ? creditView(a) : { mny: Number(a.accmny) || 0, debt: 0, limit: 0, shared: false };
+        var cv = isCreditAcc ? creditView(a) : { mny: Number(a.accmny) || 0, net: 0, limit: 0, shared: false };
         var mny = cv.mny;
-        var dbt = cv.debt;
-        var mnyHtml = '<span style="font-weight:700;color:' + (dbt > 0 ? 'var(--red)' : (mny >= 0 ? 'var(--green)' : 'var(--red)')) + '">¥ ' + global.UI.fmtMoney(mny) + '</span>';
+        var net = cv.net;
+        var mnyHtml = '<span style="font-weight:700;color:' + (net > 0 ? 'var(--red)' : 'var(--green)') + '">¥ ' + global.UI.fmtMoney(mny) + '</span>';
         if (isCreditAcc) {
+          var nt = netText(net);
           mnyHtml += '<small style="display:block;color:var(--muted);font-size:11px;margin-top:2px">额度 ¥' + global.UI.fmtMoney(cv.limit) +
-            (dbt > 0 ? ' · 负债 ¥' + global.UI.fmtMoney(dbt) : '') +
+            (nt ? ' · ' + nt : '') +
             (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</small>';
         }
         var uidStr = String(a.accuid || '');
@@ -318,11 +391,11 @@
               ? '<button class="op-btn" title="恢复显示" data-act="restore" data-id="' + a.accid + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>'
               : '<button class="op-btn del" title="隐藏" data-act="hide" data-id="' + a.accid + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.9 18.1C16.4 19.3 14.3 20 12 20c-6.5 0-10-7-10-7 1-2 2.4-3.7 4-4.9"/><path d="M9.9 4.2A10 10 0 0 1 12 4c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3"/><path d="M3 3l18 18"/></svg></button>') +
           '</div></td>' +
-          // 信用类账户：行尾追加明细单元格（手机端显示一行：左额度 / 右负债+账单日）
+          // 信用类账户：行尾追加明细单元格（手机端显示一行：左额度 / 右负债(存款)+账单日）
           (isCreditAcc
             ? '<td class="acct-credit-cell">' +
                 '<span class="cs-left">信用额度 ¥' + global.UI.fmtMoney(cv.limit) + (cv.shared ? '（共享）' : '') + '</span>' +
-                '<span class="cs-right">负债 ¥' + global.UI.fmtMoney(dbt) + (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</span>' +
+                '<span class="cs-right">' + (netText(net) || '负债 ¥0.00') + (a.accday ? ' · 账单日 ' + a.accday + ' 号' : '') + '</span>' +
               '</td>'
             : '') +
           '</tr>';

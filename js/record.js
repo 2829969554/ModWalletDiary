@@ -190,10 +190,11 @@
     var m = d.mingmu.find(function (x) { return x.mname === name.trim() && !x.mhide; });
     return m ? m.mid : 0;
   }
-  /* 账户类型显示：银行卡/借记卡/信用卡 后面带卡号后四位，如 借记卡6688、信用卡2588 */
+  /* 账户类型显示：银行卡/借记卡/信用卡/数字人民币 后面带账号后四位
+   * 如 借记卡6688、信用卡2588、数字人民币9999 */
   function acctTypeLabel(a) {
     var t = a.acctype || '';
-    if (t === '借记卡' || t === '信用卡' || t === '银行卡') {
+    if (t === '借记卡' || t === '信用卡' || t === '银行卡' || t === '数字人民币') {
       var l4 = String(a.accuid || '').replace(/\D/g, '').slice(-4);
       return t + (l4 ? l4 : '');
     }

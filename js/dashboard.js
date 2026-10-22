@@ -451,7 +451,8 @@
     var arrow = '<button class="combo-arrow" tabindex="-1"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>';
     var acctOpts = '<option value="">请选择交易账户</option>' + d.accounts.filter(function (a) { return !a.acchide; }).map(function (a) {
       var t = a.acctype || '';
-      if (t === '借记卡' || t === '信用卡' || t === '银行卡') {
+      // 卡类与数字人民币带账号后四位，如 借记卡6688、信用卡2588、数字人民币9999
+      if (t === '借记卡' || t === '信用卡' || t === '银行卡' || t === '数字人民币') {
         var l4 = String(a.accuid || '').replace(/\D/g, '').slice(-4);
         t = t + (l4 || '');
       }
