@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>关于 · ModWalletDiary 钱包日记</title>
+<link rel="icon" type="image/svg+xml" href="img/logo.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+  <div id="mask"></div>
+  <main id="main">
+    <div id="pages">
+      <section id="page-about" class="page"></section>
+    </div>
+  </main>
+</div>
+
+<script src="js/ui.js"></script>
+<script src="js/svg-icons.js"></script>
+<script src="js/about-content.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const page = document.getElementById('page-about');
+  const content = window.AboutContent;
+
+  // 单独打开的关于页，主题跟着 App 里的设置走
+  let saved = '';
+  try {
+    saved = localStorage.getItem('WalletDiaryTheme') || '';
+  } catch (e) {
+    // 无痕模式下读不到存储，用自动主题
+  }
+  if (window.UI && window.UI.applyTheme) window.UI.applyTheme(saved || 'auto');
+
+  function jumpToHash() {
+    const hash = (location.hash || '').replace(/^#/, '').toLowerCase();
+    if (hash !== 'yinsi' && hash !== 'xieyi') return;
+    const target = document.getElementById(hash);
+    if (target) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+  }
+
+  page.innerHTML = content.hero() + content.privacy('yinsi') + content.terms('xieyi');
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', jumpToHash);
+  } else {
+    setTimeout(jumpToHash, 0);
+  }
+  window.addEventListener('hashchange', jumpToHash);
+})();
+</script>
+</body>
+</html>

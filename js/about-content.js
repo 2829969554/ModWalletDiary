@@ -1,0 +1,28 @@
+// about-content.js —— 应用介绍、隐私政策、服务协议正文
+// 应用内「关于」页、启动前的协议页、独立文档页都从这儿取，省得同一段话散在三个地方
+
+(function (global) {
+  'use strict';
+
+  const APP_VERSION = '1.0.0';   // 和 manifest.json 的 versionName 对齐
+  const BUILD_YEAR = '2026';
+
+  const APP_ICON = global.SvgIcons.get('logo-about');
+
+  const HERO = `<div class="card about-hero"><div class="about-logo">${APP_ICON}</div><h2 class="about-name">ModWalletDiary · 钱包日记</h2><p class="about-ver">版本 ${APP_VERSION}　·　${BUILD_YEAR}</p><p class="about-intro">一款完全离线的个人记账应用：密码解锁、AES 加密本地存储，支持收支记账、款项名目与支付工具管理、多账户与信用卡还款提醒、总资产/负债/总授信统计、灵活时间范围报表，以及公历/农历生日与节日倒计时。纯前端实现，所有依赖均已本地化。</p><div class="about-badges"><span class="about-badge">永久免费</span><span class="about-badge">无需联网</span><span class="about-badge">开源项目</span></div><div class="about-badges about-badges-2"><span class="about-badge">无广告</span><span class="about-badge">离线应用</span><span class="about-badge">记账软件</span></div><div class="about-meta"><div class="about-meta-row"><span>开发者</span><b>@ModGoSir</b></div><div class="about-meta-row"><span>联系邮箱</span><b><a href="mailto:2829969554@qq.com">2829969554@qq.com</a></b></div><div class="about-meta-row"><span>项目地址</span><b><a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">https://gitee.com/wxgshuju/ModWalletDiary</a></b></div></div></div>`;
+
+  const PRIVACY_BODY = `<p class="privacy-date">生效日期：${BUILD_YEAR} 年</p><h4>一、总则</h4><p>ModWalletDiary（钱包日记，以下简称“本应用”）是一款开源、免费、无广告的离线记账工具。我们高度重视你的隐私：<b>本应用不收集、不上传、不分享任何个人数据</b>，你的账本完全属于你自己。</p><h4>二、数据的存储与加密</h4><p>本应用的全部账本数据（账单、款项名目、支付工具、账户、设置等）仅保存在你设备本地（浏览器 localStorage / App 本地存储）中，并使用你设置的密码进行 <b>AES 加密</b> 后存储。本应用没有服务器，也不存在任何云端账户体系，开发者无法访问你的任何数据。</p><h4>三、网络与第三方</h4><p>本应用核心功能<b>无需联网</b>即可完整使用。应用内不含广告、统计埋点、第三方追踪 SDK；不会向任何第三方出售、出租或共享你的信息。</p><h4>四、系统权限说明</h4><p>在安卓 App 环境中，本应用仅在以下场景请求对应能力，且均由你主动触发：</p><p>· <b>文件导出/导入</b>：将加密账本备份写入你的设备目录或从本机选择文件，用于备份与迁移；<br>· <b>系统分享</b>：导出备份后调起系统分享面板，是否分享、分享给谁完全由你决定；<br>· <b>网络权限</b>：仅用于可选地加载品牌图标 CDN（不影响离线使用）。</p><h4>五、你的权利</h4><p>你可以随时通过「管理」页导出加密备份、导入恢复、修改密码；删除浏览器/App 数据即可彻底清除本应用的全部数据。密码一旦遗失，数据无法解密，请务必妥善保管。</p><h4>六、未成年人保护</h4><p>本应用不收集任何个人信息，适合所有年龄段用户使用。</p><h4>七、开源与免责</h4><p>本应用为开源项目，源代码托管于 <a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">https://gitee.com/wxgshuju/ModWalletDiary</a>，欢迎查阅与反馈。本应用按“现状”提供，不对因误操作、设备故障或密码遗失导致的数据丢失承担责任。建议你定期在「管理」页导出备份。</p><h4>八、联系方式</h4><p>如对本隐私策略有任何疑问，请联系：<a href="mailto:2829969554@qq.com">2829969554@qq.com</a>（开发者 @ModGoSir）。</p>`;
+
+  const TERMS_BODY = `<p class="privacy-date">生效日期：${BUILD_YEAR} 年</p><h4>一、协议的接受</h4><p>本协议是你与 ModWalletDiary（钱包日记，以下简称“本应用”）开发者之间就使用本应用所订立的协议。你下载、安装或使用本应用，即表示你已阅读并同意本协议全部条款；如不同意，请停止使用并卸载本应用。</p><h4>二、服务内容</h4><p>本应用是一款开源、免费、无广告的<b>离线个人记账工具</b>，提供收支记录、款项名目与支付工具管理、多账户资金管理、信用卡账单日还款提醒、多范围统计报表、重要日期倒计时等功能。本应用无需注册账号，不提供云同步服务，核心功能在无网络环境下可完整使用。</p><h4>三、用户责任</h4><p>· 你应妥善保管解锁密码。<b>密码一旦遗失，账本数据将无法解密恢复</b>，开发者无法协助找回；<br>· 你应自行负责数据的备份与保管，建议通过「管理」页定期导出加密备份；<br>· 你应确保记账内容合法合规，不得利用本应用从事任何违法违规活动，不得对本应用进行反向工程以外的侵权使用。</p><h4>四、数据与隐私</h4><p>本应用的全部数据仅保存在你的设备本地，并使用你设置的密码进行 AES 加密存储；本应用不收集、不上传、不分享任何个人数据，不含广告、统计埋点与第三方追踪 SDK。详细处理方式请参阅上方的《隐私政策》。</p><h4>五、开源许可</h4><p>本应用为开源项目，源代码托管于 <a href="https://gitee.com/wxgshuju/ModWalletDiary" target="_blank" rel="noopener">https://gitee.com/wxgshuju/ModWalletDiary</a>。你可以在遵守开源许可的前提下查阅、学习与二次开发；二次分发时不得冒充官方版本，不得移除或篡改开发者信息与隐私声明。</p><h4>六、免费与无广告</h4><p>本应用承诺<b>永久免费、无广告、无内购、无需联网</b>。开发者会尽力维护并持续改进，但不对功能更新频率与长期可用性作出承诺。</p><h4>七、免责声明</h4><p>本应用按“现状”提供，不对因误操作、设备故障、系统升级、密码遗失、未按要求备份或不可抗力导致的数据丢失承担责任。在适用法律允许的范围内，开发者不承担由此产生的间接损失。</p><h4>八、协议变更</h4><p>开发者可能根据功能变化或法律要求更新本协议，更新后的协议将在本页面公布并在开源仓库同步。协议更新后你继续使用本应用，即视为接受更新后的协议。</p><h4>九、联系方式</h4><p>如对本协议有任何疑问，请联系：<a href="mailto:2829969554@qq.com">2829969554@qq.com</a>（开发者 @ModGoSir）。</p>`;
+
+  // 协议卡片，id 传了就挂上去，启动协议页靠它做锚点定位
+  const policyCard = (id, title, body) => `<div${id ? ` id="${id}"` : ''} class="card about-privacy"><div class="card-title"><span class="bar"></span>${title}</div><div class="privacy-body">${body}</div></div>`;
+
+  global.AboutContent = {
+    version: APP_VERSION,
+    year: BUILD_YEAR,
+    hero: () => HERO,
+    privacy: (id) => policyCard(id, '隐私政策', PRIVACY_BODY),
+    terms: (id) => policyCard(id, '服务协议', TERMS_BODY)
+  };
+})(window);

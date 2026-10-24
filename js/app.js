@@ -1,78 +1,96 @@
-/* ============================================================
- * app.js — 应用入口：解锁流程 / 路由 / 侧栏 / H5+ 双击返回退出
- * ============================================================ */
+// app.js —— 解锁流程、页面路由、侧栏、安卓返回键
 (function (global) {
   'use strict';
 
-  var PAGES = {
-    dashboard: { title: '仪表盘', render: function () { global.Pages.dashboard.render(); } },
-    record: { title: '我要记账', render: function () { global.Pages.record.render(); } },
-    names: { title: '款项名目', render: function () { global.Pages.names.render(); } },
-    tools: { title: '支付工具', render: function () { global.Pages.tools.render(); } },
-    accounts: { title: '账户管理', render: function () { global.Pages.accounts.render(); } },
-    stats: { title: '统计', render: function () { global.Pages.stats.render(); } },
-    manage: { title: '管理', render: function () { global.Pages.manage.render(); } },
-    settings: { title: '设置', render: function () { global.Pages.settings.render(); } },
-    about: { title: '关于', render: function () { global.Pages.about.render(); } }
-  };
-  var current = 'dashboard';
+  let current = 'dashboard';
+  let lastBack = 0; // 上一次按返回键的时间，用来判断是不是连按
+  let navItems = []; // 导航本身就是页面清单：data-page -> 标题 + 对应的 section
+
+  function readNav() {
+    navItems = [];
+    document.querySelectorAll('#nav [data-page]').forEach((a) => {
+      const key = a.dataset.page;
+      const label = a.querySelector('.side-label');
+      navItems.push({
+        key: key,
+        title: label ? label.textContent.trim() : key,
+        link: a,
+        panel: document.getElementById('page-' + key)
+      });
+    });
+  }
+
+  function navigate(page, force) {
+    if (current === page && !force) return;
+    current = page;
+    let title = '';
+    navItems.forEach((it) => {
+      it.panel.hidden = it.key !== page;
+      it.link.classList.toggle('active', it.key === page);
+      if (it.key === page) title = it.title;
+    });
+    document.getElementById('header-title').textContent = title;
+    closeMobileSidebar();
+    global.Pages[page].render();
+    document.getElementById('pages').scrollTop = 0;
+  }
 
   function init() {
-    detectEnv();
-    // 解锁前先按镜像设置应用显示模式（auto/light/dark）
+    // HBuilderX 打包后才有 plus，浏览器里直接跳过
+    if (global.plus) {
+      document.documentElement.classList.add('app-env');
+      global.addEventListener('plusready', () => {
+        document.documentElement.classList.add('app-env');
+      });
+    }
+    // 解锁页也要跟着显示模式走，所以先从 localStorage 里镜像的那份读
     if (global.UI && global.UI.applyTheme) {
       global.UI.applyTheme(global.localStorage.getItem('WalletDiaryTheme') || 'auto');
     }
-    bindSidebar();
+
+    readNav();
     bindNav();
+    bindSidebar();
     bindAuth();
     bindBack();
+    // 页面里写的是图标占位，这儿统一填上真正的 SVG
+    global.SvgIcons.mount();
     showAuth();
+
+    const t = new Date();
+    document.getElementById('header-date').textContent =
+      `${t.getFullYear()}-${global.UI.pad(t.getMonth() + 1)}-${global.UI.pad(t.getDate())} 周${'日一二三四五六'[t.getDay()]}`;
+
     // 联网时预取品牌图标到本地缓存，之后离线也能显示真图标
     if (global.Icons && global.Icons.prefetch) setTimeout(global.Icons.prefetch, 1500);
   }
 
-  /* ---------- 环境检测：浏览器 / H5+（HBuilderX 打包 APK） ---------- */
-  function detectEnv() {
-    if (global.plus) {
-      document.documentElement.classList.add('app-env');
-      global.addEventListener('plusready', function () {
-        document.documentElement.classList.add('app-env');
-      });
-    }
-  }
-
-  /* ---------- 解锁页 ---------- */
+  // 有账本就显示登录框，没有就显示设密码框
   function showAuth() {
-    var auth = document.getElementById('auth');
-    var setupBox = document.getElementById('auth-setup');
-    var loginBox = document.getElementById('auth-login');
-    var hasData = !!global.localStorage.getItem(global.DB.KEY);
+    const hasData = !!global.localStorage.getItem(global.DB.KEY);
 
-    auth.hidden = false;
+    document.getElementById('auth').hidden = false;
     document.getElementById('app').hidden = true;
 
     if (hasData) {
-      loginBox.hidden = false;
-      setupBox.hidden = true;
-      setTimeout(function () { document.getElementById('login-pw').focus(); }, 100);
+      document.getElementById('login-panel').hidden = false;
+      document.getElementById('setup-panel').hidden = true;
+      setTimeout(() => document.getElementById('login-pwd').focus(), 100);
     } else {
-      loginBox.hidden = true;
-      setupBox.hidden = false;
-      setTimeout(function () { document.getElementById('setup-pw1').focus(); }, 100);
+      document.getElementById('setup-panel').hidden = false;
+      document.getElementById('login-panel').hidden = true;
+      setTimeout(() => document.getElementById('setup-pwd').focus(), 100);
     }
-    document.getElementById('auth-err').textContent = '';
+    document.getElementById('auth-error').textContent = '';
   }
 
   function bindAuth() {
-    // 首次设置密码：两遍一致 -> 默认数据用该密码加密转 base64 写入 WalletDiary
-    document.getElementById('setup-btn').addEventListener('click', doSetup);
-    document.getElementById('setup-pw2').addEventListener('keydown', function (e) { if (e.key === 'Enter') doSetup(); });
+    const err = document.getElementById('auth-error');
 
-    function doSetup() {
-      var p1 = document.getElementById('setup-pw1').value;
-      var p2 = document.getElementById('setup-pw2').value;
-      var err = document.getElementById('auth-err');
+    // 首次设密码：两遍一致才写库，之后这个密码就是账本的加密密钥
+    const doSetup = () => {
+      const p1 = document.getElementById('setup-pwd').value;
+      const p2 = document.getElementById('setup-pwd-confirm').value;
       if (!p1 || p1.length < 4) { err.textContent = '密码至少 4 位'; return; }
       if (p1 !== p2) { err.textContent = '两次输入的密码不一致'; return; }
       try {
@@ -81,28 +99,27 @@
       } catch (e) {
         err.textContent = '初始化失败：' + e.message;
       }
-    }
+    };
 
-    // 每次打开输入密码解锁
-    document.getElementById('login-btn').addEventListener('click', doLogin);
-    document.getElementById('login-pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
-
-    function doLogin() {
-      var pw = document.getElementById('login-pw').value;
-      var err = document.getElementById('auth-err');
+    const doLogin = () => {
+      const pw = document.getElementById('login-pwd').value;
       if (!pw) { err.textContent = '请输入密码'; return; }
       try {
         global.DB.unlock(pw);
         enterApp();
       } catch (e) {
         err.textContent = '密码错误，请重试';
-        document.getElementById('login-pw').value = '';
-        document.getElementById('login-pw').focus();
+        document.getElementById('login-pwd').value = '';
+        document.getElementById('login-pwd').focus();
       }
-    }
+    };
 
-    // 锁定按钮
-    document.getElementById('lock-btn').addEventListener('click', function () {
+    document.getElementById('setup-btn').addEventListener('click', doSetup);
+    document.getElementById('setup-pwd-confirm').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSetup(); });
+    document.getElementById('login-btn').addEventListener('click', doLogin);
+    document.getElementById('login-pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+
+    document.getElementById('lock-btn').addEventListener('click', () => {
       global.UI.closeModal();
       showAuth();
     });
@@ -111,88 +128,67 @@
   function enterApp() {
     document.getElementById('auth').hidden = true;
     document.getElementById('app').hidden = false;
-    document.getElementById('login-pw').value = '';
-    document.getElementById('setup-pw1').value = '';
-    document.getElementById('setup-pw2').value = '';
+    document.getElementById('login-pwd').value = '';
+    document.getElementById('setup-pwd').value = '';
+    document.getElementById('setup-pwd-confirm').value = '';
     navigate('dashboard', true);
   }
 
-  /* ---------- 路由 ---------- */
-  function navigate(page, force) {
-    if (current === page && !force) return;
-    current = page;
-    Object.keys(PAGES).forEach(function (k) {
-      document.getElementById('page-' + k).hidden = (k !== page);
-    });
-    var navItems = document.querySelectorAll('#nav .nav-item');
-    navItems.forEach(function (a) {
-      a.classList.toggle('active', a.dataset.page === page);
-    });
-    document.getElementById('page-title').textContent = PAGES[page].title;
-    closeMobileSidebar();
-    PAGES[page].render();
-    document.getElementById('pages').scrollTop = 0;
-  }
-
   function bindNav() {
-    document.querySelectorAll('#nav .nav-item').forEach(function (a) {
-      a.addEventListener('click', function () { navigate(a.dataset.page); });
+    navItems.forEach((it) => {
+      it.link.addEventListener('click', () => navigate(it.key));
     });
-    var t = new Date();
-    var week = ['日', '一', '二', '三', '四', '五', '六'][t.getDay()];
-    document.getElementById('page-date').textContent =
-      t.getFullYear() + '-' + global.UI.pad(t.getMonth() + 1) + '-' + global.UI.pad(t.getDate()) + ' 周' + week;
   }
 
-  /* ---------- 侧栏：桌面收缩 / 移动抽屉 ---------- */
   function bindSidebar() {
-    var sidebar = document.getElementById('sidebar');
-    var mask = document.getElementById('mask');
+    const sidebar = document.getElementById('sidebar');
+    const mask = document.getElementById('sidebar-mask');
 
-    document.getElementById('collapse-btn').addEventListener('click', function () {
+    document.getElementById('sidebar-collapse').addEventListener('click', () => {
       sidebar.classList.toggle('mini');
     });
-    document.getElementById('menu-btn').addEventListener('click', function () {
+    document.getElementById('menu-toggle').addEventListener('click', () => {
       sidebar.classList.toggle('mobile-open');
       mask.classList.toggle('show', sidebar.classList.contains('mobile-open'));
     });
     mask.addEventListener('click', closeMobileSidebar);
   }
 
+  // 手机上侧栏是抽屉，宽屏下没有这回事
   function closeMobileSidebar() {
-    if (window.innerWidth <= 768) {
-      document.getElementById('sidebar').classList.remove('mobile-open');
-      document.getElementById('mask').classList.remove('show');
-    }
+    if (window.innerWidth > 768) return;
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebar-mask').classList.remove('show');
   }
 
-  /* ---------- H5+ 安卓：双击返回退出 ---------- */
-  var lastBack = 0;
+  // 返回键两秒内按两次才退出，第一次先给个提示
+  function checkDoubleBack(onQuit, onFirst) {
+    const now = Date.now();
+    if (now - lastBack < 2000) {
+      onQuit();
+      return;
+    }
+    lastBack = now;
+    if (onFirst) onFirst();
+  }
+
   function bindBack() {
-    // HBuilderX 5+ runtime：plusready 后拦截 back 键
-    document.addEventListener('plusready', function () {
-      global.plus.key.addEventListener('backbutton', function () {
-        var now = Date.now();
-        if (now - lastBack < 2000) {
-          global.plus.runtime.quit();
-        } else {
-          lastBack = now;
-          global.UI.toast('再按一次退出应用');
-        }
+    // HBuilderX 5+ runtime：plusready 后才拦得到 back 键
+    document.addEventListener('plusready', () => {
+      global.plus.key.addEventListener('backbutton', () => {
+        checkDoubleBack(
+          () => global.plus.runtime.quit(),
+          () => global.UI.toast('再按一次退出应用')
+        );
       }, false);
     });
 
     // 浏览器环境模拟：ESC 键（便于调试）
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !document.getElementById('app').hidden &&
-          document.getElementById('modal-overlay').hidden) {
-        var now = Date.now();
-        if (now - lastBack < 2000) {
-          global.UI.toast('（浏览器模拟）双击退出');
-        } else {
-          lastBack = now;
-        }
-      }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (document.getElementById('app').hidden) return;
+      if (!document.getElementById('modal-mask').hidden) return;
+      checkDoubleBack(() => global.UI.toast('（浏览器模拟）双击退出'));
     });
   }
 

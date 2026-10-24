@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 钱包日记的图标：浏览器标签页 favicon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- 底板：圆角方块 -->
+  <rect width="48" height="48" rx="12" fill="#6366f1"/>
+  <!-- 钱包主体：圆角矩形 -->
+  <path d="M12 17a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4z" fill="#ffffff"/>
+  <!-- 右侧卡扣 -->
+  <path d="M32 22h6v6h-6a3 3 0 0 1 0-6z" fill="#a5b4fc"/>
+</svg>

@@ -1,17 +1,13 @@
-/* ============================================================
- * icons.js — 图标库：支付工具 / 平台 logo 采集 + 自定义随机色
- * 品牌图标优先使用本地内置库 brand-icons.js（global.BRAND_DB，
- * SVG 采集自 Iconify 聚合图集：Simple Icons CC0 / Remix Icon Apache-2.0
- * / Arcticons GPL-3.0 / Logos MIT 等），完全离线可用；
- * 内置库没有的 slug 再尝试 Simple Icons CDN，最后回退"随机颜色 + 首字"。
- * ============================================================ */
+// icons.js —— 支付工具 / 平台 logo 与自定义随机色
+// 品牌图标优先用内置库 brand-icons.js（global.BRAND_DB），内置没有的再走
+// Simple Icons CDN，断网时用 localStorage 里缓存的那份，再不行就随机色加首字
 (function (global) {
   'use strict';
 
-  var SI_BASE = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
+  const SI_BASE = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
 
-  // 名称匹配关键词 -> 图标 slug（对应 global.BRAND_DB；空 slug = 随机色回退）
-  var PLATFORM_MAP = [
+  // 名称关键词 -> 图标 slug（对应 global.BRAND_DB；slug 为空就是走随机色）
+  const PLATFORM_MAP = [
     { keys: ['支付宝', 'alipay', '余利宝', '网商'], slug: 'alipay', name: '支付宝' },
     { keys: ['花呗'], slug: 'alipay', name: '花呗' },
     { keys: ['微信支付', '微信收款'], slug: 'wechatpay', name: '微信支付' },
@@ -65,121 +61,123 @@
   ];
 
   // 随机色盘（自定义名称用）
-  var PALETTE = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e',
+  const PALETTE = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e',
     '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981',
     '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#64748b'];
 
+  // djb2，同一个名字永远算出同一个颜色，换台设备也是
   function hashStr(str) {
-    var h = 5381;
-    for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
     return h;
   }
 
   // 返回 {type:'svg'|'none', slug, brandName, color}
   function matchPlatform(name) {
     if (!name) return { type: 'none', slug: '', brandName: '', color: PALETTE[hashStr('x') % PALETTE.length] };
-    var n = String(name).toLowerCase();
-    for (var i = 0; i < PLATFORM_MAP.length; i++) {
-      var m = PLATFORM_MAP[i];
-      for (var j = 0; j < m.keys.length; j++) {
-        if (n.indexOf(m.keys[j].toLowerCase()) !== -1) {
-          if (m.slug) return { type: 'svg', slug: m.slug, brandName: m.name || name, color: '' };
-          // 命中了品牌但无 slug：用稳定的随机色
-          return { type: 'none', slug: '', brandName: '', color: PALETTE[hashStr(String(name).trim()) % PALETTE.length] };
-        }
-      }
-    }
+    const n = String(name).toLowerCase();
+    let hit = null;
+    PLATFORM_MAP.some((m) => {
+      const matched = m.keys.some((k) => n.indexOf(k.toLowerCase()) !== -1);
+      if (matched) { hit = m; return true; }
+      return false;
+    });
+    // 认出来了但没收录 slug，或者压根没认出来，都用随机色
+    if (hit && hit.slug) return { type: 'svg', slug: hit.slug, brandName: hit.name || name, color: '' };
     return { type: 'none', slug: '', brandName: '', color: PALETTE[hashStr(String(name).trim()) % PALETTE.length] };
   }
 
-  // 已加载的 slug 内存缓存
-  var loaded = {};
+  // 已经加载过的图标，slug -> {vb, s}
+  const loaded = {};
 
-  // 离线缓存：localStorage 存 slug -> {vb, s}，断网后仍可显示品牌图标
   function cacheRead(slug) {
     try {
-      var c = JSON.parse(localStorage.getItem('WDBIcos') || '{}');
+      const c = JSON.parse(localStorage.getItem('WDBIcos') || '{}');
       return c[slug];
     } catch (e) { return undefined; }
   }
+
   function cacheWrite(slug, data) {
     try {
-      var c = JSON.parse(localStorage.getItem('WDBIcos') || '{}');
+      const c = JSON.parse(localStorage.getItem('WDBIcos') || '{}');
       c[slug] = data;
       localStorage.setItem('WDBIcos', JSON.stringify(c));
     } catch (e) { /* ignore */ }
   }
 
-  // 读取一个 slug 的图标数据 {vb, s}：
-  // 1) 本地内置 BRAND_DB（离线可用） 2) localStorage 缓存 3) Simple Icons CDN
+  // 内置库 -> 本地缓存 -> CDN，顺序不能换：离线时前两级才兜得住
   function loadIcon(slug) {
     if (loaded[slug] !== undefined) return Promise.resolve(loaded[slug]);
-    var db = global.BRAND_DB || {};
+    const db = global.BRAND_DB || {};
     if (db[slug]) { loaded[slug] = db[slug]; return Promise.resolve(db[slug]); }
-    var cached = cacheRead(slug);
+    const cached = cacheRead(slug);
     if (cached && cached.vb && cached.s && cached.s.indexOf('<') === -1) {
       loaded[slug] = cached; return Promise.resolve(cached);
     }
     return fetch(SI_BASE + slug + '.svg')
-      .then(function (r) { if (!r.ok) throw 0; return r.text(); })
-      .then(function (txt) {
-        var vb = /viewBox="([^"]+)"/.exec(txt);
-        var inner = /<svg[^>]*>([\s\S]*?)<\/svg>/.exec(txt);
-        var data = null;
-        if (vb && inner) {
-          var s = inner[1]
-            .replace(/<title[\s\S]*?<\/title>/gi, '')
-            .replace(/\sxmlns[^=]*="[^"]*"/g, '')
-            .replace(/\sclass="[^"]*"/g, '')
-            .replace(/\s+/g, ' ').trim();
-          if (s && !/<script/i.test(s)) data = { vb: vb[1], s: s };
-        }
+      .then((r) => { if (!r.ok) throw 0; return r.text(); })
+      .then((txt) => {
+        const data = parseSvg(txt);
         loaded[slug] = data;
         if (data) cacheWrite(slug, data);
         return data;
       })
-      .catch(function () { loaded[slug] = null; return null; });
+      .catch(() => { loaded[slug] = null; return null; });
   }
 
-  // 联网时预取全部品牌图标到本地缓存（内置库已有则跳过）
+  function parseSvg(txt) {
+    const vb = /viewBox="([^"]+)"/.exec(txt);
+    const inner = /<svg[^>]*>([\s\S]*?)<\/svg>/.exec(txt);
+    if (!vb || !inner) return null;
+    const s = inner[1]
+      .replace(/<title[\s\S]*?<\/title>/gi, '')
+      .replace(/\sxmlns[^=]*="[^"]*"/g, '')
+      .replace(/\sclass="[^"]*"/g, '')
+      .replace(/\s+/g, ' ').trim();
+    if (!s || /<script/i.test(s)) return null;
+    return { vb: vb[1], s: s };
+  }
+
+  // 联网时把所有品牌图标先缓存下来，内置库已有的跳过
   function prefetch() {
-    var db = global.BRAND_DB || {};
-    allSlugs().forEach(function (slug) {
+    const db = global.BRAND_DB || {};
+    allSlugs().forEach((slug) => {
       if (!db[slug] && !cacheRead(slug)) loadIcon(slug);
     });
   }
 
-  // 给一个容器填充 logo：优先品牌 SVG（官方品牌色），否则随机色 + 首字
   function fillLogo(el, name) {
     if (!el) return;
-    var info = matchPlatform(name);
+    const info = matchPlatform(name);
     el.innerHTML = '';
-    if (info.type === 'svg') {
-      loadIcon(info.slug).then(function (data) {
-        if (!el) return;
-        if (data) {
-          el.innerHTML = '<svg viewBox="' + data.vb + '" fill="currentColor" width="60%" height="60%">' + data.s + '</svg>';
-          el.style.background = '#fff';
-          el.style.color = data.c ? '#' + data.c : '#1e2233'; // 品牌官方色（logos 多色标自带颜色不受影响）
-        } else {
-          setFallback();
-        }
-      });
-    } else {
-      setFallback();
+    if (info.type !== 'svg') {
+      fallbackLogo(el, name, info.color);
+      return;
     }
-    function setFallback() {
-      var ch = (name || '?').trim().charAt(0).toUpperCase() || '?';
-      el.textContent = ch;
-      el.style.background = info.color || PALETTE[hashStr(name || 'x') % PALETTE.length];
-      el.style.color = '#fff';
-    }
+    loadIcon(info.slug).then((data) => {
+      if (!el) return;
+      if (!data) {
+        fallbackLogo(el, name, info.color);
+        return;
+      }
+      el.innerHTML = `<svg viewBox="${data.vb}" fill="currentColor" width="60%" height="60%">${data.s}</svg>`;
+      el.style.background = '#fff';
+      // 多色标自带 fill 不吃 currentColor，只有单色标才用得上品牌官方色
+      el.style.color = data.c ? '#' + data.c : '#1e2233';
+    });
   }
 
-  // 收集全部 slug，供离线预下载
+  // 随机色 + 首字
+  function fallbackLogo(el, name, color) {
+    const ch = (name || '?').trim().charAt(0).toUpperCase() || '?';
+    el.textContent = ch;
+    el.style.background = color || PALETTE[hashStr(name || 'x') % PALETTE.length];
+    el.style.color = '#fff';
+  }
+
   function allSlugs() {
-    var s = {};
-    PLATFORM_MAP.forEach(function (m) { if (m.slug) s[m.slug] = 1; });
+    const s = {};
+    PLATFORM_MAP.forEach((m) => { if (m.slug) s[m.slug] = 1; });
     return Object.keys(s);
   }
 

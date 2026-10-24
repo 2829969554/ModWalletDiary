@@ -1,10 +1,7 @@
-/* ============================================================
- * brand-icons.js — 常用支付软件/平台/银行品牌图标（本地内置，离线可用）
- * SVG 数据采集自 Iconify 聚合图集：Simple Icons (CC0)、Remix Icon (Apache-2.0)、
- * Arcticons (GPL-3.0)、Logos (MIT) 等。mono 图标使用 currentColor，
- * 可由外部 color 控制颜色；多色图标（如银联）保留品牌原色。
- * 重新采集：node build-icons.mjs
- * ============================================================ */
+// brand-icons.js —— 常用支付软件/平台/银行品牌图标（本地内置，离线可用）
+// SVG 采集自 Iconify 聚合图集：Simple Icons (CC0)、Remix Icon (Apache-2.0)、
+// Arcticons (GPL-3.0)、Logos (MIT) 等；单色图标走 currentColor，多色图标（如银联）保留原色
+// 重新采集：node build-icons.mjs
 (function (global) {
   'use strict';
   global.BRAND_DB = {

@@ -251,9 +251,12 @@ python -m http.server 8080
 ```
 ModWalletDiary/
 ├── index.html          入口
+├── about.html          独立关于页（隐私政策 / 服务协议，可单独打开）
+├── version.html        启动前协议页（#yinsi / #xieyi 锚点定位）
 ├── manifest.json       HBuilderX 5+App 打包配置
 ├── build-icons.mjs     品牌图标采集脚本（node build-icons.mjs）
 ├── css/style.css       全部样式（浅色/深色自适应）
+├── img/logo.svg        应用图标（浏览器标签页 favicon）
 ├── docs/screenshots/   手机端界面截图（本文引用）
 ├── lib/                本地离线库
 │   ├── crypto-js.min.js   AES 加密
@@ -262,8 +265,10 @@ ModWalletDiary/
 └── js/
     ├── brand-icons.js  37 个彩色品牌图标（本地内置）
     ├── icons.js        图标匹配（内置库优先 + CDN 回退 + 随机色回退）
+    ├── svg-icons.js    界面线性图标（侧栏 / 操作按钮 / 悬浮按钮）
     ├── storage.js      存储层（AES/Base64、增删改查、编号只增、余额联动、转账）
     ├── ui.js           弹窗 / Toast / 可编辑下拉 / 显示模式
+    ├── about-content.js 应用介绍 + 隐私政策 + 服务协议正文（三个页面共用一份）
     ├── dashboard.js    仪表盘（圆环 + 时光轴 + 还款横幅 + 倒计时 + 悬浮记账）
     ├── record.js       我要记账
     ├── names.js        款项名目
@@ -272,7 +277,7 @@ ModWalletDiary/
     ├── stats.js        统计
     ├── manage.js       管理（导出/导入/改密码）
     ├── settings.js     设置
-    ├── about.js        关于 + 隐私策略
+    ├── about.js        应用内「关于」页
     └── app.js          入口：解锁 / 路由 / 侧栏 / 双击返回退出
 ```
 
